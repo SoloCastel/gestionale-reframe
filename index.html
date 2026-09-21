@@ -3,50 +3,297 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Nuovo progetto web." />
-    <title>Nuovo progetto</title>
+    <meta
+      name="description"
+      content="Gestionale ReFrame — lavori in corso. Un progetto di Andrea Castellazzo."
+    />
+    <title>Gestionale ReFrame — lavori in corso</title>
     <link
       rel="icon"
       type="image/svg+xml"
-      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23000'/%3E%3Ccircle cx='16' cy='16' r='5' fill='%23fff'/%3E%3C/svg%3E"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23111111'/%3E%3Cpath d='M9 8h14v4H13v4h8v4h-8v4H9z' fill='%23fff'/%3E%3C/svg%3E"
     />
     <style>
+      :root {
+        color-scheme: light;
+        --ink: #111111;
+        --paper: #ffffff;
+        --muted: #747474;
+        --line: #d8d8d8;
+        --pad: clamp(1.25rem, 4vw, 4rem);
+      }
+
       * {
         box-sizing: border-box;
       }
 
-      html,
-      body {
-        min-height: 100%;
-        margin: 0;
+      html {
+        scroll-behavior: smooth;
+        scroll-snap-type: y mandatory;
       }
 
       body {
-        display: grid;
-        place-items: center;
-        min-height: 100vh;
-        min-height: 100dvh;
-        background: #ffffff;
-        color: #000000;
+        margin: 0;
+        background: var(--paper);
+        color: var(--ink);
         font-family: Arial, Helvetica, sans-serif;
+        overflow-x: hidden;
       }
 
-      main {
-        padding: 2rem;
-        text-align: center;
+      a {
+        color: inherit;
       }
 
-      h1 {
+      .panel {
+        position: relative;
+        display: grid;
+        min-height: 100vh;
+        min-height: 100svh;
+        padding: var(--pad);
+        overflow: hidden;
+        scroll-snap-align: start;
+        scroll-snap-stop: always;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .panel__index {
+        position: absolute;
+        top: var(--pad);
+        left: var(--pad);
         margin: 0;
-        font-size: clamp(2.5rem, 10vw, 7rem);
+        color: var(--muted);
+        font-size: 0.75rem;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+      }
+
+      .panel__content {
+        align-self: center;
+        width: min(100%, 76rem);
+        margin-inline: auto;
+      }
+
+      h1,
+      h2,
+      p {
+        margin: 0;
+      }
+
+      h1,
+      h2 {
+        max-width: 12ch;
+        font-size: clamp(3.4rem, 11vw, 10rem);
         font-weight: 400;
-        line-height: 1;
+        line-height: 0.9;
+        letter-spacing: -0.065em;
+        text-wrap: balance;
+      }
+
+      .hero h1 {
+        max-width: none;
+      }
+
+      .scroll-cue {
+        position: absolute;
+        right: var(--pad);
+        bottom: var(--pad);
+        display: grid;
+        width: 3rem;
+        height: 3rem;
+        padding: 0;
+        place-items: center;
+        border: 1px solid var(--ink);
+        border-radius: 50%;
+        background: transparent;
+        color: var(--ink);
+        cursor: pointer;
+        transition: background 180ms ease, color 180ms ease;
+        animation: cue 1.8s ease-in-out infinite;
+      }
+
+      .scroll-cue:hover,
+      .scroll-cue:focus-visible {
+        background: var(--ink);
+        color: var(--paper);
+        outline: none;
+      }
+
+      .scroll-cue svg {
+        width: 1.1rem;
+        height: 1.1rem;
+      }
+
+      .work h2 span {
+        display: block;
+      }
+
+      .work h2 span:last-child {
+        color: var(--muted);
+      }
+
+      .contact-card {
+        display: grid;
+        gap: clamp(2rem, 6vw, 5rem);
+      }
+
+      .contact-card h2 {
+        max-width: none;
+        font-size: clamp(2.8rem, 9vw, 8rem);
+      }
+
+      .contacts {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem 2rem;
+        padding-top: 1.25rem;
+        border-top: 1px solid var(--ink);
+      }
+
+      .contacts a {
+        position: relative;
+        font-size: clamp(1rem, 1.6vw, 1.25rem);
+        text-decoration: none;
+      }
+
+      .contacts a::after {
+        position: absolute;
+        right: 0;
+        bottom: -0.2rem;
+        left: 0;
+        height: 1px;
+        background: currentColor;
+        content: "";
+        transform: scaleX(0);
+        transform-origin: right;
+        transition: transform 220ms ease;
+      }
+
+      .contacts a:hover::after,
+      .contacts a:focus-visible::after {
+        transform: scaleX(1);
+        transform-origin: left;
+      }
+
+      .reveal {
+        opacity: 0;
+        transition: opacity 800ms cubic-bezier(0.2, 0.8, 0.2, 1),
+          transform 900ms cubic-bezier(0.2, 0.8, 0.2, 1);
+        will-change: opacity, transform;
+      }
+
+      .hero .reveal {
+        transform: translateY(3rem) scale(0.96);
+      }
+
+      .work .reveal {
+        transform: translateX(-8vw);
+      }
+
+      .contact .reveal {
+        transform: translateY(5rem);
+      }
+
+      .panel.is-visible .reveal {
+        opacity: 1;
+        transform: none;
+      }
+
+      @keyframes cue {
+        0%,
+        100% {
+          transform: translateY(0);
+        }
+        50% {
+          transform: translateY(0.45rem);
+        }
+      }
+
+      @media (max-width: 48rem) {
+        h1,
+        h2 {
+          font-size: clamp(3rem, 17vw, 6rem);
+          line-height: 0.92;
+        }
+
+        .contacts {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        html {
+          scroll-behavior: auto;
+        }
+
+        .reveal {
+          opacity: 1;
+          transform: none;
+          transition: none;
+        }
+
+        .scroll-cue {
+          animation: none;
+        }
       }
     </style>
   </head>
   <body>
     <main>
-      <h1>ciao</h1>
+      <section class="panel hero is-visible" id="benvenuto">
+        <p class="panel__index">01 / Benvenuto</p>
+        <div class="panel__content reveal">
+          <h1>Buongiorno</h1>
+        </div>
+        <button class="scroll-cue" type="button" aria-label="Scorri alla sezione successiva">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 4v15m0 0 6-6m-6 6-6-6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </button>
+      </section>
+
+      <section class="panel work" id="lavori-in-corso">
+        <p class="panel__index">02 / Progetto</p>
+        <div class="panel__content reveal">
+          <h2><span>Gestionale ReFrame:</span><span>lavori in corso</span></h2>
+        </div>
+      </section>
+
+      <section class="panel contact" id="contatti">
+        <p class="panel__index">03 / Contatti</p>
+        <div class="panel__content contact-card reveal">
+          <h2>Andrea Castellazzo</h2>
+          <nav class="contacts" aria-label="Contatti di Andrea Castellazzo">
+            <a href="mailto:andreacastellazzo@gmail.com">andreacastellazzo@gmail.com</a>
+            <a href="tel:+393396448089">+39 339 644 8089</a>
+            <a href="https://exploring-space.com/" target="_blank" rel="noreferrer">exploring-space.com ↗</a>
+          </nav>
+        </div>
+      </section>
     </main>
+
+    <script>
+      const panels = document.querySelectorAll(".panel");
+      const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+      if (!reduceMotion) {
+        const observer = new IntersectionObserver(
+          (entries) => {
+            entries.forEach((entry) => {
+              entry.target.classList.toggle("is-visible", entry.isIntersecting);
+            });
+          },
+          { threshold: 0.45 }
+        );
+
+        panels.forEach((panel) => observer.observe(panel));
+      }
+
+      document.querySelector(".scroll-cue").addEventListener("click", () => {
+        document.querySelector("#lavori-in-corso").scrollIntoView({
+          behavior: reduceMotion ? "auto" : "smooth"
+        });
+      });
+    </script>
   </body>
 </html>
