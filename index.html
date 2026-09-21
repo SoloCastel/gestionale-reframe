@@ -237,7 +237,7 @@
       <section class="panel hero is-visible" id="benvenuto">
         <p class="panel__index">01 / Benvenuto</p>
         <div class="panel__content reveal">
-          <h1>Buongiorno</h1>
+          <h1 id="greeting">Buongiorno</h1>
         </div>
         <button class="scroll-cue" type="button" aria-label="Scorri alla sezione successiva">
           <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -267,6 +267,16 @@
     </main>
 
     <script>
+      const greeting = document.querySelector("#greeting");
+
+      const updateGreeting = () => {
+        const hour = new Date().getHours();
+        greeting.textContent = hour >= 4 && hour < 18 ? "Buongiorno" : "Buonasera";
+      };
+
+      updateGreeting();
+      window.setInterval(updateGreeting, 60000);
+
       const panels = document.querySelectorAll(".panel");
       const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
