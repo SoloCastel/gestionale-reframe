@@ -3,301 +3,174 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta
-      name="description"
-      content="Gestionale ReFrame — lavori in corso. Un progetto di Andrea Castellazzo."
-    />
-    <title>Gestionale ReFrame — lavori in corso</title>
-    <link
-      rel="icon"
-      type="image/svg+xml"
-      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23111111'/%3E%3Cpath d='M9 8h14v4H13v4h8v4h-8v4H9z' fill='%23fff'/%3E%3C/svg%3E"
-    />
-    <style>
-      :root {
-        color-scheme: light;
-        --ink: #111111;
-        --paper: #ffffff;
-        --muted: #747474;
-        --line: #d8d8d8;
-        --pad: clamp(1.25rem, 4vw, 4rem);
-      }
-
-      * {
-        box-sizing: border-box;
-      }
-
-      html {
-        scroll-behavior: smooth;
-        scroll-snap-type: y mandatory;
-      }
-
-      body {
-        margin: 0;
-        background: var(--paper);
-        color: var(--ink);
-        font-family: Arial, Helvetica, sans-serif;
-        overflow-x: hidden;
-      }
-
-      a {
-        color: inherit;
-      }
-
-      .panel {
-        position: relative;
-        display: grid;
-        min-height: 100vh;
-        min-height: 100svh;
-        padding: var(--pad);
-        overflow: hidden;
-        scroll-snap-align: start;
-        scroll-snap-stop: always;
-        border-bottom: 1px solid var(--line);
-      }
-
-      .panel__index {
-        position: absolute;
-        top: var(--pad);
-        left: var(--pad);
-        margin: 0;
-        color: var(--muted);
-        font-size: 0.75rem;
-        letter-spacing: 0.14em;
-        text-transform: uppercase;
-      }
-
-      .panel__content {
-        align-self: center;
-        width: min(100%, 76rem);
-        margin-inline: auto;
-      }
-
-      h1,
-      h2,
-      p {
-        margin: 0;
-      }
-
-      h1,
-      h2 {
-        max-width: 12ch;
-        font-size: clamp(3.4rem, 11vw, 10rem);
-        font-weight: 400;
-        line-height: 0.9;
-        letter-spacing: -0.065em;
-        text-wrap: balance;
-      }
-
-      .hero h1 {
-        max-width: none;
-      }
-
-      .scroll-cue {
-        position: absolute;
-        right: var(--pad);
-        bottom: var(--pad);
-        display: grid;
-        width: 3rem;
-        height: 3rem;
-        padding: 0;
-        place-items: center;
-        border: 1px solid var(--ink);
-        border-radius: 50%;
-        background: transparent;
-        color: var(--ink);
-        cursor: pointer;
-        transition: background 180ms ease, color 180ms ease;
-        animation: cue 1.8s ease-in-out infinite;
-      }
-
-      .scroll-cue:hover,
-      .scroll-cue:focus-visible {
-        background: var(--ink);
-        color: var(--paper);
-        outline: none;
-      }
-
-      .scroll-cue svg {
-        width: 1.1rem;
-        height: 1.1rem;
-      }
-
-      .work h2 span {
-        display: block;
-      }
-
-      .work h2 span:last-child {
-        color: var(--muted);
-      }
-
-      .contact-card {
-        display: grid;
-        gap: clamp(2rem, 6vw, 5rem);
-      }
-
-      .contact-card h2 {
-        max-width: none;
-        font-size: clamp(2.8rem, 9vw, 8rem);
-      }
-
-      .contacts {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.75rem 2rem;
-        padding-top: 1.25rem;
-        border-top: 1px solid var(--ink);
-      }
-
-      .contacts a {
-        position: relative;
-        font-size: clamp(1rem, 1.6vw, 1.25rem);
-        text-decoration: none;
-      }
-
-      .contacts a::after {
-        position: absolute;
-        right: 0;
-        bottom: -0.2rem;
-        left: 0;
-        height: 1px;
-        background: currentColor;
-        content: "";
-        transform: scaleX(0);
-        transform-origin: right;
-        transition: transform 220ms ease;
-      }
-
-      .contacts a:hover::after,
-      .contacts a:focus-visible::after {
-        transform: scaleX(1);
-        transform-origin: left;
-      }
-
-      .reveal {
-        opacity: 0;
-        transition: opacity 800ms cubic-bezier(0.2, 0.8, 0.2, 1),
-          transform 900ms cubic-bezier(0.2, 0.8, 0.2, 1);
-        will-change: opacity, transform;
-      }
-
-      .hero .reveal,
-      .work .reveal,
-      .contact .reveal {
-        transform: translateX(-8vw);
-      }
-
-      .panel.is-visible .reveal {
-        opacity: 1;
-        transform: none;
-      }
-
-      @keyframes cue {
-        0%,
-        100% {
-          transform: translateY(0);
-        }
-        50% {
-          transform: translateY(0.45rem);
-        }
-      }
-
-      @media (max-width: 48rem) {
-        h1,
-        h2 {
-          font-size: clamp(3rem, 17vw, 6rem);
-          line-height: 0.92;
-        }
-
-        .contacts {
-          align-items: flex-start;
-          flex-direction: column;
-        }
-      }
-
-      @media (prefers-reduced-motion: reduce) {
-        html {
-          scroll-behavior: auto;
-        }
-
-        .reveal {
-          opacity: 1;
-          transform: none;
-          transition: none;
-        }
-
-        .scroll-cue {
-          animation: none;
-        }
-      }
-    </style>
+    <meta name="theme-color" content="#17151c" />
+    <meta name="description" content="Prototipo operativo del gestionale ReFrame Hub." />
+    <title>ReFrame — Gestionale</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%236d5dfc'/%3E%3Cpath d='M9 8h14v4H13v4h8v4h-8v4H9z' fill='white'/%3E%3C/svg%3E" />
+    <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
-    <main>
-      <section class="panel hero is-visible" id="benvenuto">
-        <p class="panel__index">01 / Benvenuto</p>
-        <div class="panel__content reveal">
-          <h1 id="greeting">Buongiorno</h1>
+    <div class="demo-banner"><span></span> Prototipo interattivo · dati dimostrativi</div>
+
+    <div class="app">
+      <aside class="sidebar" aria-label="Navigazione principale">
+        <div class="brand"><span class="brand-mark">R</span><span class="brand-name">ReFrame</span></div>
+        <nav class="main-nav">
+          <button class="nav-item is-active" data-view="today"><span class="nav-icon">⌂</span><span>Oggi</span><b>5</b></button>
+          <button class="nav-item" data-view="opportunities"><span class="nav-icon">◇</span><span>Opportunità</span><b>3</b></button>
+          <button class="nav-item" data-view="projects"><span class="nav-icon">▣</span><span>Progetti</span></button>
+          <button class="nav-item" data-view="calendar"><span class="nav-icon">□</span><span>Calendario</span></button>
+          <div class="nav-separator"></div>
+          <button class="nav-item" data-view="clients"><span class="nav-icon">◎</span><span>Clienti</span></button>
+          <button class="nav-item" data-view="team"><span class="nav-icon">◌</span><span>Team</span></button>
+          <button class="nav-item" data-view="finance" data-permission="finance"><span class="nav-icon">€</span><span>Amministrazione</span><b>4</b></button>
+          <button class="nav-item" data-view="insights" data-permission="insights"><span class="nav-icon">↗</span><span>Insight</span></button>
+        </nav>
+        <div class="sidebar-bottom">
+          <button class="quick-add" data-open-modal><span>＋</span> Nuova opportunità</button>
+          <button class="profile" id="profileButton">
+            <span class="avatar" data-avatar>AC</span>
+            <span><strong data-person-name>Andrea</strong><small data-person-role>Operativo · commerciale</small></span>
+            <i>⌄</i>
+          </button>
         </div>
-        <button class="scroll-cue" type="button" aria-label="Scorri alla sezione successiva">
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M12 4v15m0 0 6-6m-6 6-6-6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
-          </svg>
-        </button>
-      </section>
+      </aside>
 
-      <section class="panel work" id="lavori-in-corso">
-        <p class="panel__index">02 / Progetto</p>
-        <div class="panel__content reveal">
-          <h2><span>Gestionale ReFrame:</span><span>lavori in corso</span></h2>
+      <main class="workspace">
+        <header class="topbar">
+          <div class="breadcrumbs"><span>ReFrame Hub</span><i>/</i><strong id="currentViewLabel">Oggi</strong></div>
+          <div class="topbar-actions">
+            <button class="icon-button" aria-label="Cerca" id="searchButton">⌕</button>
+            <button class="icon-button notification-button" aria-label="Notifiche" id="notificationButton">♢<span></span></button>
+            <button class="role-switch" id="roleSwitch"><span class="avatar small" data-avatar>AC</span><span data-person-name>Andrea</span><i>⌄</i></button>
+          </div>
+        </header>
+
+        <div class="view-container">
+          <section class="view is-active" id="view-today" data-view-panel="today">
+            <div class="page-heading">
+              <div><p class="eyebrow" id="todayDate">Lunedì 21 settembre</p><h1><span id="greeting">Buonasera</span>, <span data-person-name>Andrea</span>.</h1><p class="subtitle" id="roleSummary">Hai 5 cose che richiedono attenzione. Partiamo da quelle importanti.</p></div>
+              <button class="primary-button" data-open-modal><span>＋</span> Nuova opportunità</button>
+            </div>
+
+            <div class="focus-grid">
+              <article class="focus-card accent-card">
+                <div class="card-kicker"><span class="pulse"></span> Prossima azione</div>
+                <h2>Conferma la squadra per Artluce</h2>
+                <p>Il lavoro è confermato dal cliente, ma manca ancora chi si occuperà del montaggio.</p>
+                <div class="card-meta"><span>Scade oggi · 18:00</span><span class="people"><i>AC</i><i>SM</i><i>＋</i></span></div>
+                <button class="card-action" data-toast="Richiesta inviata al team">Trova una persona <span>→</span></button>
+              </article>
+              <article class="focus-card decision-card">
+                <div class="card-kicker">Decisioni da prendere <b>3</b></div>
+                <button class="decision-row" data-toast="Aperto preventivo Pasta Lab"><span><i class="status-dot orange"></i><strong>Approvare stima Pasta Lab</strong><small>Range €1.800–2.400 · dati completi</small></span><em>→</em></button>
+                <button class="decision-row" data-toast="Aperta revisione del video"><span><i class="status-dot purple"></i><strong>Revisionare video Barcolana</strong><small>Versione 03 · 4 feedback aperti</small></span><em>→</em></button>
+                <button class="decision-row" data-toast="Aperto conflitto di calendario"><span><i class="status-dot red"></i><strong>Risolvere sovraccarico Luca</strong><small>128% della capacità questa settimana</small></span><em>→</em></button>
+              </article>
+            </div>
+
+            <div class="dashboard-grid">
+              <article class="panel tasks-panel">
+                <div class="panel-heading"><div><h3>Il mio lavoro</h3><p>Solo ciò che richiede una tua azione</p></div><button class="text-button" data-view-jump="calendar">Vedi calendario</button></div>
+                <div class="task-tabs"><button class="is-active" data-task-filter="today">Oggi <span>4</span></button><button data-task-filter="late">In ritardo <span>1</span></button><button data-task-filter="week">Settimana <span>8</span></button></div>
+                <div class="task-list" id="taskList">
+                  <label class="task-row" data-task-state="today"><input type="checkbox" /><span class="custom-check"></span><span class="task-main"><strong>Selezione fotografie evento Artluce</strong><small>Artluce · Consegna 01</small></span><time>12:30</time><i class="priority high"></i></label>
+                  <label class="task-row" data-task-state="today"><input type="checkbox" /><span class="custom-check"></span><span class="task-main"><strong>Chiamare Martina per disponibilità</strong><small>Pasta Lab · Opportunità</small></span><time>14:00</time><i class="priority medium"></i></label>
+                  <label class="task-row" data-task-state="today"><input type="checkbox" /><span class="custom-check"></span><span class="task-main"><strong>Inviare seconda versione homepage</strong><small>Studio Nord · Sito web</small></span><time>17:00</time><i class="priority medium"></i></label>
+                  <label class="task-row" data-task-state="today"><input type="checkbox" /><span class="custom-check"></span><span class="task-main"><strong>Confermare preventivo stampa</strong><small>ReFrame interno</small></span><time>18:30</time><i class="priority low"></i></label>
+                  <label class="task-row late-task" data-task-state="late"><input type="checkbox" /><span class="custom-check"></span><span class="task-main"><strong>Ricontattare Garda Sailing</strong><small>Opportunità · Follow-up cliente</small></span><time>Ieri</time><i class="priority high"></i></label>
+                  <label class="task-row week-task" data-task-state="week"><input type="checkbox" /><span class="custom-check"></span><span class="task-main"><strong>Preparare moodboard lancio prodotto</strong><small>Lumea · Direzione creativa</small></span><time>Gio</time><i class="priority low"></i></label>
+                </div>
+              </article>
+
+              <article class="panel agenda-panel">
+                <div class="panel-heading"><div><h3>Oggi</h3><p>Agenda e scadenze</p></div><span class="live-time" id="liveTime">19:22</span></div>
+                <div class="agenda">
+                  <div class="agenda-time"><time>09:00</time><span></span></div><div class="agenda-event completed"><small>Completato</small><strong>Stand-up ReFrame</strong><span>Team · 30 min</span></div>
+                  <div class="agenda-time current"><time>14:00</time><span></span></div><div class="agenda-event purple"><small>Opportunità</small><strong>Call Pasta Lab</strong><span>Tu + Simone · 45 min</span></div>
+                  <div class="agenda-time"><time>17:00</time><span></span></div><div class="agenda-event"><small>Consegna</small><strong>Homepage Studio Nord</strong><span>Versione 02</span></div>
+                </div>
+              </article>
+            </div>
+
+            <div class="dashboard-grid lower-grid">
+              <article class="panel pipeline-panel">
+                <div class="panel-heading"><div><h3>Pipeline commerciale</h3><p>€26.400 di valore potenziale</p></div><button class="text-button" data-view-jump="opportunities">Apri pipeline</button></div>
+                <div class="pipeline-bar"><span style="--w:31%;--c:#a799ff"></span><span style="--w:27%;--c:#6d5dfc"></span><span style="--w:23%;--c:#ffc46b"></span><span style="--w:19%;--c:#54b58d"></span></div>
+                <div class="pipeline-legend"><span><i style="--c:#a799ff"></i>Da qualificare <b>€8.200</b></span><span><i style="--c:#6d5dfc"></i>In proposta <b>€7.100</b></span><span><i style="--c:#ffc46b"></i>In attesa <b>€6.000</b></span><span><i style="--c:#54b58d"></i>Confermate <b>€5.100</b></span></div>
+              </article>
+              <article class="panel capacity-panel">
+                <div class="panel-heading"><div><h3>Carico squadra</h3><p>Questa settimana</p></div><button class="text-button" data-view-jump="team">Tutto il team</button></div>
+                <div class="capacity-list"><div><span><i class="mini-avatar lilac">AC</i>Andrea</span><div><b style="--w:82%"></b></div><em>82%</em></div><div><span><i class="mini-avatar peach">LM</i>Luca</span><div><b class="over" style="--w:100%"></b></div><em class="danger">128%</em></div><div><span><i class="mini-avatar mint">MR</i>Martina</span><div><b style="--w:54%"></b></div><em>54%</em></div></div>
+              </article>
+            </div>
+          </section>
+
+          <section class="view" id="view-opportunities" data-view-panel="opportunities">
+            <div class="page-heading compact"><div><p class="eyebrow">Commerciale</p><h1>Opportunità</h1><p class="subtitle">Ogni contatto ha una prossima azione. Nessuna occasione resta sospesa.</p></div><button class="primary-button" data-open-modal><span>＋</span> Nuova opportunità</button></div>
+            <div class="metric-row"><article><span>Pipeline aperta</span><strong>€26.400</strong><small>12 opportunità</small></article><article><span>Da ricontattare</span><strong>3</strong><small>1 già in ritardo</small></article><article><span>Conversione</span><strong>41%</strong><small>Ultimi 90 giorni</small></article><article><span>Tempo medio</span><strong>12 gg</strong><small>Contatto → conferma</small></article></div>
+            <div class="toolbar"><div class="search-field">⌕ <input type="search" id="opportunitySearch" placeholder="Cerca cliente o servizio" /></div><div class="filter-group"><button class="filter-button is-active" data-pipeline-filter="all">Tutte</button><button class="filter-button" data-pipeline-filter="mine">Solo mie</button><button class="filter-button" data-pipeline-filter="late">Da sollecitare</button></div></div>
+            <div class="kanban" id="opportunityBoard">
+              <section class="kanban-column"><header><span><i class="status-dot gray"></i>Da qualificare</span><b>3</b></header><div class="kanban-cards"><article class="opportunity-card" data-owner="Andrea" data-late="true"><div class="card-top"><span class="client-logo blue">GS</span><small>2 giorni fa</small></div><h3>Garda Sailing</h3><p>Foto + video regata</p><div class="estimate"><small>Stima preliminare</small><strong>€1.400–2.600</strong></div><div class="next-action late"><span>↗</span><div><small>In ritardo</small><strong>Ricontattare il cliente</strong></div></div><footer><span class="mini-avatar lilac">AC</span><span>3/8 dati</span></footer></article><article class="opportunity-card" data-owner="Simone"><div class="card-top"><span class="client-logo yellow">OM</span><small>Oggi</small></div><h3>Officina Maffei</h3><p>Nuova identità visiva</p><div class="estimate"><small>Stima preliminare</small><strong>€2.800–4.200</strong></div><div class="next-action"><span>→</span><div><small>Domani</small><strong>Capire perimetro e tempi</strong></div></div><footer><span class="mini-avatar dark">SM</span><span>2/8 dati</span></footer></article></div></section>
+              <section class="kanban-column"><header><span><i class="status-dot purple"></i>In proposta</span><b>4</b></header><div class="kanban-cards"><article class="opportunity-card" data-owner="Andrea"><div class="card-top"><span class="client-logo red">PL</span><small>Ieri</small></div><h3>Pasta Lab</h3><p>Campagna lancio + contenuti</p><div class="estimate verified"><small>Stima verificata</small><strong>€1.800–2.400</strong></div><div class="next-action"><span>→</span><div><small>Oggi · 14:00</small><strong>Call di allineamento</strong></div></div><footer><span class="people"><i>AC</i><i>SM</i></span><span>7/8 dati</span></footer></article><article class="opportunity-card" data-owner="Martina"><div class="card-top"><span class="client-logo green">LV</span><small>3 gg fa</small></div><h3>La Vela Resort</h3><p>Shooting stagionale</p><div class="estimate verified"><small>Stima verificata</small><strong>€2.200</strong></div><div class="next-action"><span>→</span><div><small>Mercoledì</small><strong>Inviare proposta finale</strong></div></div><footer><span class="mini-avatar mint">MR</span><span>8/8 dati</span></footer></article></div></section>
+              <section class="kanban-column"><header><span><i class="status-dot orange"></i>In attesa cliente</span><b>2</b></header><div class="kanban-cards"><article class="opportunity-card" data-owner="Simone"><div class="card-top"><span class="client-logo purple">LU</span><small>5 gg fa</small></div><h3>Lumea</h3><p>Video prodotto + 3D</p><div class="estimate verified"><small>Proposta inviata</small><strong>€4.600</strong></div><div class="next-action"><span>→</span><div><small>Venerdì</small><strong>Follow-up decisione</strong></div></div><footer><span class="mini-avatar dark">SM</span><span>Completa</span></footer></article></div></section>
+              <section class="kanban-column"><header><span><i class="status-dot green"></i>Confermate</span><b>3</b></header><div class="kanban-cards"><article class="opportunity-card confirmed-card" data-owner="Andrea"><div class="card-top"><span class="client-logo black">AS</span><small>Confermata</small></div><h3>Artluce Service</h3><p>Evento corporate</p><div class="estimate verified"><small>Valore concordato</small><strong>€5.100</strong></div><div class="next-action incomplete"><span>!</span><div><small>1 requisito mancante</small><strong>Assegnare il montaggio</strong></div></div><footer><span class="people"><i>AC</i><i>SM</i><i>＋</i></span><span>7/8 dati</span></footer></article></div></section>
+            </div>
+          </section>
+
+          <section class="view" id="view-projects" data-view-panel="projects">
+            <div class="page-heading compact"><div><p class="eyebrow">Produzione</p><h1>Progetti</h1><p class="subtitle">Le consegne prima delle task: stato, responsabilità e prossimo blocco.</p></div><button class="secondary-button" data-toast="Vista archivio aperta">Archivio</button></div>
+            <div class="project-filters"><button class="is-active">Attivi <span>7</span></button><button>In revisione <span>3</span></button><button>Bloccati <span>1</span></button><button>Conclusi</button></div>
+            <div class="project-list">
+              <article class="project-row"><div class="project-identity"><span class="client-logo black">AS</span><div><small>Artluce Service</small><h3>Evento corporate — settembre</h3></div></div><div class="project-state"><span class="state-tag production">In produzione</span><div class="progress"><span style="--w:64%"></span></div><small>7 di 11 attività</small></div><div class="project-delivery"><small>Prossima consegna</small><strong>Selezione fotografica</strong><span>Oggi · 17:00</span></div><div class="project-team"><span class="people"><i>AC</i><i>SM</i><i>LM</i></span><button aria-label="Apri progetto">→</button></div></article>
+              <article class="project-row"><div class="project-identity"><span class="client-logo blue">BR</span><div><small>ReFrame Original</small><h3>Barcolana — film di bordo</h3></div></div><div class="project-state"><span class="state-tag review">In revisione</span><div class="progress"><span style="--w:84%"></span></div><small>Round 3 di 3</small></div><div class="project-delivery"><small>Prossima azione</small><strong>Approvazione montaggio</strong><span>Domani · Simone</span></div><div class="project-team"><span class="people"><i>AC</i><i>SM</i></span><button aria-label="Apri progetto">→</button></div></article>
+              <article class="project-row"><div class="project-identity"><span class="client-logo yellow">SN</span><div><small>Studio Nord</small><h3>Nuovo sito corporate</h3></div></div><div class="project-state"><span class="state-tag production">In produzione</span><div class="progress"><span style="--w:46%"></span></div><small>12 di 26 attività</small></div><div class="project-delivery"><small>Prossima consegna</small><strong>Homepage v02</strong><span>Oggi · 17:00</span></div><div class="project-team"><span class="people"><i>AC</i><i>MR</i></span><button aria-label="Apri progetto">→</button></div></article>
+              <article class="project-row blocked"><div class="project-identity"><span class="client-logo purple">LU</span><div><small>Lumea</small><h3>Visualizzazione prodotto 3D</h3></div></div><div class="project-state"><span class="state-tag blocked">Bloccato</span><div class="progress"><span style="--w:22%"></span></div><small>Attesa materiali cliente</small></div><div class="project-delivery"><small>Bloccato da</small><strong>File CAD definitivi</strong><span>Da 3 giorni</span></div><div class="project-team"><span class="people"><i>AC</i><i>LM</i></span><button aria-label="Apri progetto">→</button></div></article>
+            </div>
+          </section>
+
+          <section class="view" id="view-calendar" data-view-panel="calendar">
+            <div class="page-heading compact"><div><p class="eyebrow">Pianificazione</p><h1>Calendario</h1><p class="subtitle">Le tue attività, le consegne e i follow-up senza mescolare i pagamenti.</p></div><div class="calendar-controls"><button class="secondary-button">‹</button><button class="secondary-button">Questa settimana</button><button class="secondary-button">›</button></div></div>
+            <div class="calendar-mode"><button class="is-active">Mio lavoro</button><button>Consegne</button><button>Team</button><button>Commerciale</button></div>
+            <div class="week-scroll"><div class="week-calendar"><div class="time-column"><span></span><time>09</time><time>11</time><time>13</time><time>15</time></div><div class="day-column"><header><small>LUN</small><strong>21</strong></header><div class="day-canvas"><article class="calendar-event purple" style="--top:5%;--height:16%"><small>09:00</small><strong>Stand-up ReFrame</strong></article><article class="calendar-event orange" style="--top:48%;--height:18%"><small>14:00</small><strong>Call Pasta Lab</strong></article></div></div><div class="day-column"><header><small>MAR</small><strong>22</strong></header><div class="day-canvas"><article class="calendar-event blue" style="--top:20%;--height:32%"><small>10:30</small><strong>Post produzione Artluce</strong></article></div></div><div class="day-column"><header><small>MER</small><strong>23</strong></header><div class="day-canvas"><article class="calendar-event green" style="--top:34%;--height:16%"><small>12:00</small><strong>Consegna Studio Nord</strong></article><article class="calendar-event purple" style="--top:69%;--height:19%"><small>16:00</small><strong>Review Barcolana</strong></article></div></div><div class="day-column"><header><small>GIO</small><strong>24</strong></header><div class="day-canvas"><article class="calendar-event blue" style="--top:10%;--height:42%"><small>09:30</small><strong>Shooting La Vela</strong></article></div></div><div class="day-column"><header><small>VEN</small><strong>25</strong></header><div class="day-canvas"><article class="calendar-event orange" style="--top:18%;--height:16%"><small>10:00</small><strong>Follow-up Lumea</strong></article><article class="calendar-event green" style="--top:57%;--height:25%"><small>14:30</small><strong>Consegna Artluce</strong></article></div></div></div></div>
+          </section>
+
+          <section class="view" id="view-clients" data-view-panel="clients">
+            <div class="page-heading compact"><div><p class="eyebrow">Relazioni</p><h1>Clienti</h1><p class="subtitle">Una storia unica: contatti, opportunità, lavori e accordi permanenti.</p></div><button class="primary-button" data-toast="Creazione cliente pronta nel prossimo step"><span>＋</span> Nuovo cliente</button></div>
+            <div class="toolbar"><div class="search-field">⌕ <input type="search" placeholder="Cerca cliente" /></div><div class="filter-group"><button class="filter-button is-active">Tutti</button><button class="filter-button">Attivi</button><button class="filter-button">Con accordi</button></div></div>
+            <div class="data-table client-table"><div class="table-head"><span>Cliente</span><span>Referente interno</span><span>Lavori</span><span>Valore storico</span><span>Prossima azione</span></div><button class="table-row"><span class="entity"><i class="client-logo black">AS</i><span><strong>Artluce Service</strong><small>Eventi e service</small></span></span><span>Andrea Castellazzo</span><span>8</span><span>€18.600</span><span><b class="due-now">Oggi</b> Chiudere produzione</span></button><button class="table-row"><span class="entity"><i class="client-logo red">PL</i><span><strong>Pasta Lab</strong><small>Food & hospitality</small></span></span><span>Simone Maffessoni</span><span>2</span><span>€4.800</span><span>Oggi · Call proposta</span></button><button class="table-row"><span class="entity"><i class="client-logo purple">LU</i><span><strong>Lumea</strong><small>Design prodotto</small></span></span><span>Simone Maffessoni</span><span>4</span><span>€12.200</span><span>Ven · Follow-up</span></button><button class="table-row"><span class="entity"><i class="client-logo green">LV</i><span><strong>La Vela Resort</strong><small>Hospitality</small></span></span><span>Martina Riva</span><span>5</span><span>€9.100</span><span>Mer · Inviare proposta</span></button></div>
+          </section>
+
+          <section class="view" id="view-team" data-view-panel="team">
+            <div class="page-heading compact"><div><p class="eyebrow">Squadra</p><h1>Team</h1><p class="subtitle">Capacità dichiarata, competenze e conflitti. I lavori esterni restano privati.</p></div><button class="secondary-button" data-toast="Disponibilità aperta">Aggiorna disponibilità</button></div>
+            <div class="team-grid"><article class="member-card"><header><span class="avatar xl lilac">AC</span><span class="availability online">Disponibile</span></header><h3>Andrea Castellazzo</h3><p>Visual designer · Foto · Video · 3D</p><div class="member-load"><span>Carico ReFrame</span><strong>82%</strong><div><i style="--w:82%"></i></div></div><footer><span>6 attività</span><span>2 consegne</span></footer></article><article class="member-card warning"><header><span class="avatar xl peach">LM</span><span class="availability busy">Sovraccarico</span></header><h3>Luca Moretti</h3><p>Videomaker · Montaggio · Motion</p><div class="member-load"><span>Carico ReFrame</span><strong>128%</strong><div><i style="--w:100%"></i></div></div><footer><span>11 attività</span><span>4 consegne</span></footer></article><article class="member-card"><header><span class="avatar xl mint">MR</span><span class="availability online">Disponibile</span></header><h3>Martina Riva</h3><p>Graphic design · Branding</p><div class="member-load"><span>Carico ReFrame</span><strong>54%</strong><div><i style="--w:54%"></i></div></div><footer><span>4 attività</span><span>1 consegna</span></footer></article><article class="member-card"><header><span class="avatar xl dark">SM</span><span class="availability limited">Limitato</span></header><h3>Simone Maffessoni</h3><p>Direzione · Commerciale · PM</p><div class="member-load"><span>Capacità decisionale</span><strong>76%</strong><div><i style="--w:76%"></i></div></div><footer><span>7 decisioni</span><span>5 clienti</span></footer></article></div>
+          </section>
+
+          <section class="view" id="view-finance" data-view-panel="finance">
+            <div class="page-heading compact"><div><p class="eyebrow">Amministrazione operativa</p><h1>Denaro</h1><p class="subtitle">Preventivato, fatturato, incassato e dovuto sono quattro cose diverse.</p></div><button class="secondary-button" data-toast="Esportazione preparata">Esporta riepilogo</button></div>
+            <div class="metric-row"><article><span>Da fatturare</span><strong>€8.400</strong><small>5 lavori pronti</small></article><article><span>Da incassare</span><strong>€12.750</strong><small>€2.200 in ritardo</small></article><article><span>Da pagare al team</span><strong>€6.180</strong><small>8 compensi maturati</small></article><article><span>Incassato questo mese</span><strong>€18.300</strong><small class="positive">+14% sul mese scorso</small></article></div>
+            <div class="dashboard-grid"><article class="panel"><div class="panel-heading"><div><h3>Azioni amministrative</h3><p>In ordine di urgenza</p></div></div><div class="finance-list"><button><span class="finance-icon red">!</span><span><strong>Fattura Artluce scaduta</strong><small>€2.200 · scaduta da 6 giorni</small></span><em>Sollecita →</em></button><button><span class="finance-icon orange">↗</span><span><strong>Emettere fattura Studio Nord</strong><small>€3.800 · progetto consegnato</small></span><em>Prepara →</em></button><button><span class="finance-icon purple">€</span><span><strong>Compensi Barcolana maturati</strong><small>3 collaboratori · €1.640</small></span><em>Verifica →</em></button></div></article><article class="panel"><div class="panel-heading"><div><h3>Flusso del mese</h3><p>Stato degli importi</p></div></div><div class="money-flow"><div><span>Concordato</span><strong>€31.900</strong><i><b style="--w:100%"></b></i></div><div><span>Fatturato</span><strong>€25.100</strong><i><b style="--w:79%"></b></i></div><div><span>Incassato</span><strong>€18.300</strong><i><b style="--w:57%"></b></i></div><div><span>Distribuito</span><strong>€11.840</strong><i><b style="--w:37%"></b></i></div></div></article></div>
+          </section>
+
+          <section class="view" id="view-insights" data-view-panel="insights">
+            <div class="page-heading compact"><div><p class="eyebrow">Lettura del lavoro</p><h1>Insight</h1><p class="subtitle">Segnali per decidere meglio, non classifiche per giudicare le persone.</p></div><select class="period-select"><option>Ultimi 6 mesi</option><option>Questo mese</option><option>Quest'anno</option></select></div>
+            <div class="data-quality"><span>Qualità del dato <strong>87%</strong></span><div><i style="--w:87%"></i></div><p>Tempi completi nell’84% dei progetti · costi completi nel 92% · 3 lavori da verificare</p></div>
+            <div class="metric-row"><article><span>Fatturato</span><strong>€92.400</strong><small class="positive">+18% sul periodo precedente</small></article><article><span>Margine operativo</span><strong>38%</strong><small>Stima su dati completi</small></article><article><span>Consegne puntuali</span><strong>86%</strong><small>+7 punti percentuali</small></article><article><span>Conversione</span><strong>41%</strong><small>33 opportunità concluse</small></article></div>
+            <div class="dashboard-grid"><article class="panel chart-panel"><div class="panel-heading"><div><h3>Andamento economico</h3><p>Fatturato e compensi operativi</p></div><div class="chart-legend"><span><i></i>Fatturato</span><span><i></i>Compensi</span></div></div><div class="bar-chart"><div><span style="--h:42%"></span><i style="--h:24%"></i><small>APR</small></div><div><span style="--h:55%"></span><i style="--h:30%"></i><small>MAG</small></div><div><span style="--h:48%"></span><i style="--h:29%"></i><small>GIU</small></div><div><span style="--h:76%"></span><i style="--h:43%"></i><small>LUG</small></div><div><span style="--h:61%"></span><i style="--h:38%"></i><small>AGO</small></div><div><span style="--h:92%"></span><i style="--h:51%"></i><small>SET</small></div></div></article><article class="panel service-panel"><div class="panel-heading"><div><h3>Servizi</h3><p>Valore rispetto all’impegno</p></div></div><div class="service-ranking"><div><b>01</b><span><strong>Produzione video</strong><small>€32.600 · margine 42%</small></span><em class="positive">↑ 18%</em></div><div><b>02</b><span><strong>Branding</strong><small>€24.100 · margine 51%</small></span><em class="positive">↑ 9%</em></div><div><b>03</b><span><strong>Fotografia</strong><small>€19.800 · margine 37%</small></span><em>→ 2%</em></div><div><b>04</b><span><strong>Web design</strong><small>€15.900 · margine 28%</small></span><em class="negative">↓ 6%</em></div></div></article></div>
+          </section>
         </div>
-      </section>
+      </main>
+    </div>
 
-      <section class="panel contact" id="contatti">
-        <p class="panel__index">03 / Contatti</p>
-        <div class="panel__content contact-card reveal">
-          <h2>Andrea Castellazzo</h2>
-          <nav class="contacts" aria-label="Contatti di Andrea Castellazzo">
-            <a href="mailto:andreacastellazzo@gmail.com">andreacastellazzo@gmail.com</a>
-            <a href="tel:+393396448089">+39 339 644 8089</a>
-            <a href="https://andreacastellazzo.it/" target="_blank" rel="noreferrer">andreacastellazzo.it ↗</a>
-          </nav>
-        </div>
-      </section>
-    </main>
+    <div class="popover role-popover" id="rolePopover" hidden><small>Simula il gestionale come</small><button data-role="andrea"><span class="avatar lilac">AC</span><span><strong>Andrea</strong><em>Operativo · commerciale</em></span><b>✓</b></button><button data-role="simone"><span class="avatar dark">SM</span><span><strong>Simone</strong><em>Direzione · amministratore</em></span><b></b></button><button data-role="martina"><span class="avatar mint">MR</span><span><strong>Martina</strong><em>Operativa · graphic designer</em></span><b></b></button><button data-role="luca"><span class="avatar peach">LM</span><span><strong>Luca</strong><em>Operativo · videomaker</em></span><b></b></button></div>
 
-    <script>
-      const greeting = document.querySelector("#greeting");
+    <div class="popover notifications" id="notifications" hidden><header><strong>Notifiche</strong><button id="closeNotifications">×</button></header><button><i class="status-dot red"></i><span><strong>Consegna a rischio</strong><small>Luca ha segnalato un blocco su Artluce · 12 min</small></span></button><button><i class="status-dot purple"></i><span><strong>Nuova versione pronta</strong><small>Barcolana — montaggio v03 · 1 h</small></span></button><button><i class="status-dot green"></i><span><strong>Cliente confermato</strong><small>La Vela Resort ha accettato la proposta · 3 h</small></span></button></div>
 
-      const updateGreeting = () => {
-        const hour = new Date().getHours();
-        greeting.textContent = hour >= 4 && hour < 18 ? "Buongiorno" : "Buonasera";
-      };
+    <div class="modal-backdrop" id="opportunityModal" hidden><section class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle"><header><div><small>Inserimento rapido</small><h2 id="modalTitle">Nuova opportunità</h2></div><button class="modal-close" data-close-modal aria-label="Chiudi">×</button></header><p>Salva subito ciò che sai. Il resto verrà richiesto solamente quando serve.</p><form id="opportunityForm"><label>Cliente o organizzazione <span>obbligatorio</span><input name="client" required placeholder="Es. Garda Sailing" /></label><label>Cosa potrebbe servire? <span>anche approssimativo</span><textarea name="request" placeholder="Es. foto e video per una regata..."></textarea></label><div class="form-row"><label>Referente interno<select name="owner"><option>Andrea Castellazzo</option><option>Simone Maffessoni</option><option>Martina Riva</option><option>Da assegnare</option></select></label><label>Quando ricontattarlo?<input name="followup" type="date" /></label></div><button type="button" class="advanced-toggle" id="advancedToggle">＋ Aggiungi stima o servizi</button><div class="advanced-fields" id="advancedFields" hidden><div class="form-row"><label>Servizi indicativi<select><option>Da definire</option><option>Fotografia</option><option>Video</option><option>Foto + video</option><option>Branding</option><option>Sito web</option></select></label><label>Budget percepito<input placeholder="Es. circa €2.000" /></label></div></div><footer><span><b>2 campi</b> sono sufficienti per iniziare</span><button class="primary-button" type="submit">Salva opportunità</button></footer></form></section></div>
 
-      updateGreeting();
-      window.setInterval(updateGreeting, 60000);
+    <aside class="project-drawer" id="projectDrawer" aria-hidden="true"><header><div><small>Artluce Service</small><h2>Evento corporate — settembre</h2></div><button id="closeDrawer">×</button></header><div class="drawer-status"><span class="state-tag production">In produzione</span><span>64% completato</span></div><section><h3>Prossima consegna</h3><article class="delivery-card"><div><small>OGGI · 17:00</small><strong>Selezione fotografica</strong><span>46 fotografie post-prodotte</span></div><i>64%</i></article></section><section><h3>Responsabilità</h3><div class="responsibility"><span class="avatar lilac">AC</span><span><strong>Andrea</strong><small>Fotografia · consegna</small></span><em>€820</em></div><div class="responsibility"><span class="avatar peach">LM</span><span><strong>Luca</strong><small>Riprese video</small></span><em>€650</em></div><div class="responsibility missing"><span class="avatar">＋</span><span><strong>Montaggio da assegnare</strong><small>Blocca la consegna video</small></span><em>!</em></div></section><section><h3>Ultima attività</h3><div class="activity-line"><i></i><p><strong>Andrea</strong> ha completato “Backup e selezione iniziale”<small>Oggi · 11:42</small></p></div><div class="activity-line"><i></i><p><strong>Simone</strong> ha confermato il compenso commerciale<small>Ieri · 18:06</small></p></div></section><button class="primary-button full" data-toast="Scheda completa disponibile nella prossima iterazione">Apri scheda completa</button></aside>
 
-      const panels = document.querySelectorAll(".panel");
-      const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-      if (!reduceMotion) {
-        const observer = new IntersectionObserver(
-          (entries) => {
-            entries.forEach((entry) => {
-              entry.target.classList.toggle("is-visible", entry.isIntersecting);
-            });
-          },
-          { threshold: 0.45 }
-        );
-
-        panels.forEach((panel) => observer.observe(panel));
-      }
-
-      document.querySelector(".scroll-cue").addEventListener("click", () => {
-        document.querySelector("#lavori-in-corso").scrollIntoView({
-          behavior: reduceMotion ? "auto" : "smooth"
-        });
-      });
-    </script>
+    <div class="toast" id="toast" role="status" aria-live="polite"><span>✓</span><p id="toastText">Aggiornato</p></div>
+    <script src="app.js"></script>
   </body>
 </html>

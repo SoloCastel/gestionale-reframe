@@ -1,5 +1,7 @@
-# Gestionale ReFrame
+# Gestionale ReFrame — prototipo
 
-Prima versione: una pagina bianca con la scritta “ciao”.
+Prototipo navigabile per validare l'esperienza del futuro gestionale commerciale e operativo di ReFrame Hub.
 
-Il sito è statico e non richiede dipendenze. Per lavorarci in locale basta aprire `index.html` oppure avviare un qualsiasi server statico.
+Include dati dimostrativi, navigazione responsive, simulazione dei diversi ruoli, pipeline commerciale, progetti, calendario, clienti, team, amministrazione e insight. Non è ancora collegato a un database e le modifiche non persistono al ricaricamento.
+
+Per avviarlo in locale basta servire la cartella con un server statico, ad esempio `python3 -m http.server 4173`.
