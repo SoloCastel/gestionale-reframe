@@ -79,6 +79,34 @@ const defaultProjectTasks = {
   ]
 };
 
+const opportunityData = {
+  garda:{client:"Garda Sailing",service:"Foto + video regata",stage:"Da qualificare",owner:"Andrea",estimate:"€1.400–2.600",next:"Ricontattare il cliente",date:"Oggi",contact:"Giulia Rinaldi",notes:"Richiesta nata dopo un incontro al circolo. Da definire numero di giornate e utilizzo drone.",clientKey:"garda"},
+  officina:{client:"Officina Maffei",service:"Nuova identità visiva",stage:"Da qualificare",owner:"Simone",estimate:"€2.800–4.200",next:"Capire perimetro e tempi",date:"Domani",contact:"Marco Maffei",notes:"Rebranding completo con possibile estensione al sito web.",clientKey:"officina"},
+  pasta:{client:"Pasta Lab",service:"Campagna lancio + contenuti",stage:"In proposta",owner:"Andrea",estimate:"€1.800–2.400",next:"Call di allineamento",date:"Oggi · 14:00",contact:"Elena Rossi",notes:"Proposta quasi completa. Da validare il numero di reel e il coinvolgimento di Martina.",clientKey:"pasta"},
+  vela:{client:"La Vela Resort",service:"Shooting stagionale",stage:"In proposta",owner:"Martina",estimate:"€2.200",next:"Inviare proposta finale",date:"Mercoledì",contact:"Francesca Lodi",notes:"Fotografia lifestyle e ambienti per campagna estiva.",clientKey:"vela"},
+  lumea:{client:"Lumea",service:"Video prodotto + 3D",stage:"In attesa cliente",owner:"Simone",estimate:"€4.600",next:"Follow-up decisione",date:"Venerdì",contact:"Davide Conti",notes:"Proposta inviata. Il progetto operativo è bloccato in attesa dei file CAD.",clientKey:"lumea"}
+};
+
+const clientData = {
+  artluce:{name:"Artluce Service",sector:"Eventi e service",owner:"Andrea Castellazzo",contact:"Paolo Bianchi",email:"produzione@artluce.it",value:"€18.600",jobs:"8",agreement:"5% commerciale sulle produzioni acquisite",projects:["artluce"],opportunities:[]},
+  pasta:{name:"Pasta Lab",sector:"Food & hospitality",owner:"Simone Maffessoni",contact:"Elena Rossi",email:"marketing@pastalab.it",value:"€4.800",jobs:"2",agreement:"Nessun accordo permanente",projects:[],opportunities:["pasta"]},
+  lumea:{name:"Lumea",sector:"Design prodotto",owner:"Simone Maffessoni",contact:"Davide Conti",email:"design@lumea.it",value:"€12.200",jobs:"4",agreement:"Listino 3D concordato per varianti prodotto",projects:["lumea"],opportunities:["lumea"]},
+  vela:{name:"La Vela Resort",sector:"Hospitality",owner:"Martina Riva",contact:"Francesca Lodi",email:"marketing@lavelarestort.it",value:"€9.100",jobs:"5",agreement:"Produzione stagionale primavera/estate",projects:[],opportunities:["vela"]},
+  garda:{name:"Garda Sailing",sector:"Sport e vela",owner:"Andrea Castellazzo",contact:"Giulia Rinaldi",email:"eventi@gardasailing.it",value:"€0",jobs:"0",agreement:"Nuovo contatto",projects:[],opportunities:["garda"]},
+  officina:{name:"Officina Maffei",sector:"Industria",owner:"Simone Maffessoni",contact:"Marco Maffei",email:"info@officinamaffei.it",value:"€0",jobs:"0",agreement:"Nuovo contatto",projects:[],opportunities:["officina"]}
+};
+
+const memberData = {
+  andrea:{name:"Andrea Castellazzo",initials:"AC",tone:"lilac",skills:"Visual designer · Foto · Video · 3D",availability:"Disponibile",load:"82%",capacity:"32 ore disponibili",projects:["artluce","barcolana","studio","lumea"]},
+  luca:{name:"Luca Moretti",initials:"LM",tone:"peach",skills:"Videomaker · Montaggio · Motion",availability:"Sovraccarico",load:"128%",capacity:"Conflitto su 2 consegne",projects:["artluce","lumea"]},
+  martina:{name:"Martina Riva",initials:"MR",tone:"mint",skills:"Graphic design · Branding",availability:"Disponibile",load:"54%",capacity:"18 ore disponibili",projects:["studio"]},
+  simone:{name:"Simone Maffessoni",initials:"SM",tone:"dark",skills:"Direzione · Commerciale · PM",availability:"Limitato",load:"76%",capacity:"7 decisioni aperte",projects:["artluce","barcolana"]}
+};
+
+const taskDestinations = {
+  "Selezione fotografie evento Artluce":["artluce","art-03"], "Inviare seconda versione homepage":["studio","stu-02"], "Preparare moodboard lancio prodotto":["lumea","lum-03"], "Montare teaser Artluce":["artluce","art-04"], "Esportare Barcolana v03":["barcolana","bar-02"], "Backup riprese Artluce":["artluce","art-02"], "Preparare animatic Lumea":["lumea","lum-04"], "Revisionare montaggio Barcolana":["barcolana","bar-02"], "Assegnare montaggio Artluce":["artluce","art-04"], "Aggiornare componenti Studio Nord":["studio","stu-02"]
+};
+
 const $ = (selector, scope = document) => scope.querySelector(selector);
 const $$ = (selector, scope = document) => [...scope.querySelectorAll(selector)];
 
@@ -91,13 +119,14 @@ let currentRole = roles[saved.role] ? saved.role : "andrea";
 let opportunities = Array.isArray(saved.opportunities) ? saved.opportunities : [];
 let completedTasks = saved.completedTasks || {};
 let projectTasks = saved.projectTasks || structuredClone(defaultProjectTasks);
+let entityEdits = saved.entityEdits || {};
 let activeTaskFilter = "today";
 let activeProjectKey = "artluce";
 let activeProjectTaskId = null;
 let pendingFiles = [];
 
 function persist() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify({ role: currentRole, opportunities, completedTasks, projectTasks }));
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({ role: currentRole, opportunities, completedTasks, projectTasks, entityEdits }));
 }
 
 function escapeText(value = "") {
@@ -113,6 +142,7 @@ function toast(message) {
 
 function showView(view) {
   if (!$("#view-" + view)) return;
+  closeEntityPanel();
   $$('[data-view-panel]').forEach(panel => panel.classList.toggle("is-active", panel.dataset.viewPanel === view));
   $$('[data-view]').forEach(button => button.classList.toggle("is-active", button.dataset.view === view));
   $("#currentViewLabel").textContent = labels[view];
@@ -140,6 +170,13 @@ function renderTasks() {
     completedTasks[input.dataset.taskId] = input.checked;
     persist();
     toast(input.checked ? "Attività completata" : "Attività riaperta");
+  }));
+  $$('.task-row .task-main').forEach(element => element.addEventListener("click", event => {
+    const title = element.querySelector("strong").textContent;
+    const destination = taskDestinations[title];
+    if (destination) { event.preventDefault(); event.stopPropagation(); openProjectTaskDirect(destination[0], destination[1]); return; }
+    if (title.includes("Garda Sailing")) { event.preventDefault(); event.stopPropagation(); openOpportunity("garda"); }
+    else if (title.includes("Martina")) { event.preventDefault(); event.stopPropagation(); openOpportunity("pasta"); }
   }));
 }
 
@@ -172,8 +209,12 @@ function renderOpportunities() {
   $$(".opportunity-card.is-created").forEach(card => card.remove());
   const target = $(".kanban-column .kanban-cards");
   opportunities.forEach(item => {
+    const opportunityKey = `created-${item.createdAt}`;
+    opportunityData[opportunityKey] = {client:item.client,service:item.request||item.service||"Da definire",stage:"Da qualificare",owner:(item.owner||"Da assegnare").split(" ")[0],estimate:item.budget||"Da stimare",next:"Qualificare l'opportunità",date:item.followup||"Da pianificare",contact:"Da inserire",notes:item.request||"",clientKey:opportunityKey};
+    clientData[opportunityKey] = clientData[opportunityKey] || {name:item.client,sector:"Da definire",owner:item.owner||"Da assegnare",contact:"Da inserire",email:"",value:"€0",jobs:"0",agreement:"Nuovo contatto",projects:[],opportunities:[opportunityKey]};
     const article = document.createElement("article");
     article.className = "opportunity-card is-created";
+    article.dataset.opportunity = opportunityKey;
     article.dataset.owner = item.owner.split(" ")[0];
     const initials = item.client.split(/\s+/).slice(0, 2).map(word => word[0]).join("").toUpperCase();
     const followup = item.followup ? new Date(item.followup + "T12:00:00").toLocaleDateString("it-IT", { day: "numeric", month: "short" }) : "Da pianificare";
@@ -183,6 +224,80 @@ function renderOpportunities() {
   const total = $$(".opportunity-card").length;
   const badge = $('[data-view="opportunities"] b');
   if (badge) badge.textContent = total;
+  wireConnectedSurfaces();
+}
+
+function closeEntityPanel() {
+  $("#entityPanel").classList.remove("is-open");
+  $("#entityPanel").setAttribute("aria-hidden", "true");
+}
+
+function openEntityPanel(eyebrow, title, body) {
+  $("#entityEyebrow").textContent = eyebrow;
+  $("#entityTitle").textContent = title;
+  $("#entityPanelBody").innerHTML = body;
+  $("#entityPanel").classList.add("is-open");
+  $("#entityPanel").setAttribute("aria-hidden", "false");
+}
+
+function linkedProjectButton(key) {
+  const project = projects[key];
+  return `<button class="linked-item" data-open-project="${key}"><span><strong>${escapeText(project.title)}</strong><small>${escapeText(project.client)} · ${escapeText(project.state)}</small></span><em>→</em></button>`;
+}
+
+function linkedOpportunityButton(key) {
+  const item = {...opportunityData[key], ...(entityEdits[`opp-${key}`] || {})};
+  return `<button class="linked-item" data-open-opportunity="${key}"><span><strong>${escapeText(item.client)}</strong><small>${escapeText(item.service)} · ${escapeText(item.stage)}</small></span><em>→</em></button>`;
+}
+
+function bindEntityLinks() {
+  $$('[data-open-project]', $("#entityPanel")).forEach(button => button.addEventListener("click", () => openProjectDirect(button.dataset.openProject)));
+  $$('[data-open-opportunity]', $("#entityPanel")).forEach(button => button.addEventListener("click", () => openOpportunity(button.dataset.openOpportunity)));
+  $$('[data-open-member]', $("#entityPanel")).forEach(button => button.addEventListener("click", () => openMember(button.dataset.openMember)));
+}
+
+function openOpportunity(key) {
+  const original = opportunityData[key];
+  if (!original) return;
+  const item = {...original, ...(entityEdits[`opp-${key}`] || {})};
+  openEntityPanel("Opportunità commerciale", item.client, `<div class="entity-summary"><div><span>Fase</span><strong>${escapeText(item.stage)}</strong></div><div><span>Stima</span><strong>${escapeText(item.estimate)}</strong></div><div><span>Referente</span><strong>${escapeText(item.owner)}</strong></div></div><section class="entity-section"><h3>Dati e prossima azione</h3><form class="entity-form" id="opportunityDetailForm"><label>Fase<select name="stage">${["Da qualificare","In proposta","In attesa cliente","Confermata","Persa"].map(value=>`<option${value===item.stage?" selected":""}>${value}</option>`).join("")}</select></label><label>Referente<select name="owner">${["Andrea","Simone","Martina","Luca","Da assegnare"].map(value=>`<option${value===item.owner?" selected":""}>${value}</option>`).join("")}</select></label><label>Stima<input name="estimate" value="${escapeText(item.estimate)}"></label><label>Data azione<input name="date" value="${escapeText(item.date)}"></label><label class="full-field">Prossima azione<input name="next" value="${escapeText(item.next)}"></label><label class="full-field">Note<textarea name="notes">${escapeText(item.notes)}</textarea></label><button class="primary-button" type="submit">Salva opportunità</button></form></section><section class="entity-section"><h3>Cliente</h3><div class="linked-list"><button class="linked-item" data-open-client="${item.clientKey}"><span><strong>${escapeText(item.client)}</strong><small>${escapeText(item.contact)} · apri storico cliente</small></span><em>→</em></button></div></section>${key==="lumea"?`<section class="entity-section"><h3>Progetto collegato</h3><div class="linked-list">${linkedProjectButton("lumea")}</div></section>`:""}`);
+  $("#opportunityDetailForm").addEventListener("submit", event => { event.preventDefault(); entityEdits[`opp-${key}`] = Object.fromEntries(new FormData(event.currentTarget)); persist(); toast("Opportunità aggiornata"); openOpportunity(key); });
+  $('[data-open-client]', $("#entityPanel")).addEventListener("click", event => openClient(event.currentTarget.dataset.openClient));
+  bindEntityLinks();
+}
+
+function openClient(key) {
+  const client = clientData[key];
+  if (!client) return;
+  Object.assign(client, entityEdits[`client-${key}`] || {});
+  openEntityPanel("Cliente", client.name, `<div class="entity-summary"><div><span>Valore storico</span><strong>${client.value}</strong></div><div><span>Lavori</span><strong>${client.jobs}</strong></div><div><span>Referente</span><strong>${client.owner.split(" ")[0]}</strong></div></div><section class="entity-section"><h3>Anagrafica e accordi</h3><form class="entity-form" id="clientDetailForm"><label>Contatto<input name="contact" value="${escapeText(client.contact)}"></label><label>Email<input name="email" value="${escapeText(client.email)}"></label><label class="full-field">Accordo permanente<textarea name="agreement">${escapeText(client.agreement)}</textarea></label><button type="submit" class="primary-button">Salva cliente</button></form></section><section class="entity-section"><h3>Progetti</h3><div class="linked-list">${client.projects.length?client.projects.map(linkedProjectButton).join(""):`<div class="activity-note">Nessun progetto attivo.</div>`}</div></section><section class="entity-section"><h3>Opportunità</h3><div class="linked-list">${client.opportunities.length?client.opportunities.map(linkedOpportunityButton).join(""):`<div class="activity-note">Nessuna opportunità aperta.</div>`}</div></section>`);
+  $("#clientDetailForm").addEventListener("submit", event => { event.preventDefault(); Object.assign(clientData[key],Object.fromEntries(new FormData(event.currentTarget))); entityEdits[`client-${key}`]={contact:clientData[key].contact,email:clientData[key].email,agreement:clientData[key].agreement}; persist(); toast("Dati cliente salvati"); });
+  bindEntityLinks();
+}
+
+function openMember(key) {
+  const member = memberData[key];
+  if (!member) return;
+  const memberTasks = Object.entries(projectTasks).flatMap(([projectKey,tasks]) => tasks.filter(task => task.assignee === member.name.split(" ")[0]).map(task => ({...task,projectKey})));
+  openEntityPanel("Membro del team", member.name, `<div class="entity-summary"><div><span>Disponibilità</span><strong>${member.availability}</strong></div><div><span>Carico</span><strong>${member.load}</strong></div><div><span>Capacità</span><strong>${member.capacity}</strong></div></div><section class="entity-section"><h3>Competenze</h3><div class="activity-note">${escapeText(member.skills)}</div></section><section class="entity-section"><h3>Lavorazioni assegnate</h3><div class="linked-list">${memberTasks.map(task=>`<button class="linked-item" data-direct-project="${task.projectKey}" data-direct-task="${task.id}"><span><strong>${escapeText(task.title)}</strong><small>${escapeText(projects[task.projectKey].client)} · ${escapeText(task.status)}</small></span><em>→</em></button>`).join("") || `<div class="activity-note">Nessuna lavorazione aperta.</div>`}</div></section><section class="entity-section"><h3>Progetti coinvolti</h3><div class="linked-list">${member.projects.map(linkedProjectButton).join("")}</div></section>`);
+  $$('[data-direct-project]', $("#entityPanel")).forEach(button => button.addEventListener("click", () => openProjectTaskDirect(button.dataset.directProject, button.dataset.directTask)));
+  bindEntityLinks();
+}
+
+function openProjectDirect(projectKey) {
+  closeEntityPanel();
+  showView("projects");
+  activeProjectKey = projectKey;
+  openProjectWorkspace();
+}
+
+function openProjectTaskDirect(projectKey, taskId) {
+  closeEntityPanel();
+  showView("projects");
+  activeProjectKey = projectKey;
+  openProjectWorkspace();
+  if ((projectTasks[projectKey] || []).some(task => task.id === taskId)) activeProjectTaskId = taskId;
+  renderProjectWorkspace(); renderTaskEditor();
 }
 
 function openProject(projectKey) {
@@ -285,8 +400,7 @@ function openProjectWorkspace() {
   $("#projectWorkspace").classList.add("is-open");
   $("#projectWorkspace").setAttribute("aria-hidden", "false");
   document.body.style.overflow = "hidden";
-  renderProjectWorkspace();
-  renderTaskEditor();
+  showWorkspaceTab("tasks");
 }
 
 function closeProjectWorkspace() {
@@ -305,6 +419,64 @@ function showNewTaskForm() {
     const task = { id:`${activeProjectKey.slice(0,3)}-${Date.now().toString().slice(-4)}`, phase:$("#newTaskPhase").value, title, status:"Non iniziata", assignee:$("#newTaskAssignee").value, due:"", description:"", checklist:[], comments:[] };
     projectTasks[activeProjectKey].push(task); activeProjectTaskId = task.id; persist(); renderProjectWorkspace(); renderTaskEditor(); toast("Nuova task creata");
   });
+}
+
+function showWorkspaceTab(tabName) {
+  $$('[data-workspace-tab]').forEach(button => button.classList.toggle("is-active", button.dataset.workspaceTab === tabName));
+  $("#addTaskButton").style.display = tabName === "tasks" ? "block" : "none";
+  if (tabName === "tasks") { renderProjectWorkspace(); renderTaskEditor(); return; }
+  const tasks = projectTasks[activeProjectKey] || [];
+  $("#phaseList").innerHTML = `<section class="phase"><header><strong>Riepilogo progetto</strong><span>${tasks.length}</span></header>${tasks.map(task=>`<button class="phase-task" data-summary-task="${task.id}"><span class="task-dot ${task.status==="Completata"?"done":""}"></span><span><strong>${escapeText(task.title)}</strong><small>${escapeText(task.phase)}</small></span></button>`).join("")}</section>`;
+  $$('[data-summary-task]').forEach(button => button.addEventListener("click", () => { activeProjectTaskId=button.dataset.summaryTask; showWorkspaceTab("tasks"); }));
+  if (tabName === "timeline") {
+    const ordered = [...tasks].sort((a,b)=>(a.due||"9999").localeCompare(b.due||"9999"));
+    $("#taskEditor").innerHTML = `<div class="workspace-overview"><h3>Timeline delle lavorazioni</h3><p class="subtitle">Sequenza delle scadenze e stato corrente.</p><div class="timeline-list">${ordered.map(task=>`<button class="timeline-item" data-overview-task="${task.id}"><strong>${escapeText(task.title)}</strong><small>${escapeText(task.due||"Senza scadenza")} · ${escapeText(task.assignee)} · ${escapeText(task.status)}</small></button>`).join("")}</div></div>`;
+  } else if (tabName === "files") {
+    const files = tasks.flatMap(task => (task.comments||[]).flatMap(comment => (comment.files||[]).map(file=>({file,task}))));
+    $("#taskEditor").innerHTML = `<div class="workspace-overview"><h3>File del progetto</h3><p class="subtitle">Allegati raccolti automaticamente dalle conversazioni.</p><div class="file-grid">${files.length?files.map(item=>`<button class="file-card" data-overview-task="${item.task.id}"><span>▧</span><strong>${escapeText(item.file)}</strong><small>${escapeText(item.task.title)}</small></button>`).join(""):`<p>Nessun file allegato.</p>`}</div></div>`;
+  } else {
+    const project = projects[activeProjectKey];
+    $("#taskEditor").innerHTML = `<div class="workspace-overview"><h3>Economia del progetto</h3><p class="subtitle">Compensi dichiarati e valore operativo dimostrativo.</p><div class="economy-grid">${project.people.map(person=>`<div class="economy-card"><span>${escapeText(person[1])} · ${escapeText(person[2])}</span><strong>${escapeText(person[3])}</strong></div>`).join("")}<div class="economy-card"><span>Avanzamento task</span><strong>${tasks.filter(task=>task.status==="Completata").length}/${tasks.length}</strong></div></div></div>`;
+  }
+  $("#commentList").innerHTML = `<div class="task-empty"><p>Seleziona una lavorazione per aprire la conversazione.</p></div>`;
+  $$('[data-overview-task]').forEach(button => button.addEventListener("click", () => { activeProjectTaskId=button.dataset.overviewTask; showWorkspaceTab("tasks"); }));
+}
+
+function openQuickSearch() {
+  openEntityPanel("Ricerca globale", "Cerca nel gestionale", `<section class="entity-section"><form class="entity-form" id="globalSearchForm"><label class="full-field">Cliente, progetto o persona<input id="globalSearchInput" placeholder="Es. Artluce, Luca, Barcolana" autofocus></label></form><div class="linked-list" id="globalSearchResults"></div></section>`);
+  const input = $("#globalSearchInput");
+  const render = () => {
+    const query = input.value.trim().toLowerCase();
+    const results = [];
+    Object.entries(projects).forEach(([key,item]) => { if (`${item.client} ${item.title}`.toLowerCase().includes(query)) results.push(linkedProjectButton(key)); });
+    Object.entries(clientData).forEach(([key,item]) => { if (`${item.name} ${item.sector}`.toLowerCase().includes(query)) results.push(`<button class="linked-item" data-open-client="${key}"><span><strong>${escapeText(item.name)}</strong><small>Cliente · ${escapeText(item.sector)}</small></span><em>→</em></button>`); });
+    Object.entries(memberData).forEach(([key,item]) => { if (`${item.name} ${item.skills}`.toLowerCase().includes(query)) results.push(`<button class="linked-item" data-open-member="${key}"><span><strong>${escapeText(item.name)}</strong><small>Team · ${escapeText(item.skills)}</small></span><em>→</em></button>`); });
+    $("#globalSearchResults").innerHTML = query ? results.slice(0,8).join("") || `<div class="activity-note">Nessun risultato.</div>` : `<div class="activity-note">Scrivi almeno una parola per iniziare.</div>`;
+    $$('[data-open-client]', $("#entityPanel")).forEach(button=>button.addEventListener("click",()=>openClient(button.dataset.openClient))); bindEntityLinks();
+  };
+  input.addEventListener("input", render); render(); input.focus();
+}
+
+function openNewClientForm() {
+  openEntityPanel("Nuovo cliente", "Crea anagrafica", `<section class="entity-section"><form class="entity-form" id="newClientForm"><label>Nome cliente<input name="name" required></label><label>Settore<input name="sector" required></label><label>Contatto<input name="contact"></label><label>Email<input name="email" type="email"></label><label>Referente<select name="owner"><option>Andrea Castellazzo</option><option>Simone Maffessoni</option><option>Martina Riva</option><option>Luca Moretti</option></select></label><label class="full-field">Accordi o note<textarea name="agreement"></textarea></label><button class="primary-button" type="submit">Crea cliente</button></form></section>`);
+  $("#newClientForm").addEventListener("submit", event => {
+    event.preventDefault(); const data=Object.fromEntries(new FormData(event.currentTarget)); const key=`created-${Date.now()}`;
+    clientData[key]={...data,value:"€0",jobs:"0",projects:[],opportunities:[]};
+    const row=document.createElement("button"); row.className="table-row"; row.dataset.client=key; row.innerHTML=`<span class="entity"><i class="client-logo blue">${escapeText(data.name.split(/\s+/).slice(0,2).map(word=>word[0]).join("").toUpperCase())}</i><span><strong>${escapeText(data.name)}</strong><small>${escapeText(data.sector)}</small></span></span><span>${escapeText(data.owner)}</span><span>0</span><span>€0</span><span>Nuovo cliente</span>`;
+    row.addEventListener("click",()=>openClient(key)); $(".client-table").append(row); closeEntityPanel(); toast(`${data.name} aggiunto ai clienti`);
+  });
+}
+
+function wireConnectedSurfaces() {
+  const opportunityKeys=["garda","officina","pasta","vela","lumea"];
+  $$('.opportunity-card:not(.is-created)').forEach((card,index)=>{ card.dataset.opportunity=opportunityKeys[index] || "project-artluce"; if(!card.dataset.bound){card.dataset.bound="1";card.addEventListener("click",()=>card.dataset.opportunity==="project-artluce"?openProjectDirect("artluce"):openOpportunity(card.dataset.opportunity));}});
+  $$('.opportunity-card.is-created').forEach(card=>{if(!card.dataset.bound){card.dataset.bound="1";card.addEventListener("click",()=>openOpportunity(card.dataset.opportunity));}});
+  const clientKeys=["artluce","pasta","lumea","vela"];
+  $$('.client-table .table-row').forEach((row,index)=>{row.dataset.client=row.dataset.client||clientKeys[index];if(!row.dataset.bound){row.dataset.bound="1";row.addEventListener("click",()=>openClient(row.dataset.client));}});
+  const memberKeys=["andrea","luca","martina","simone"];
+  $$('.member-card').forEach((card,index)=>{card.dataset.member=memberKeys[index];if(!card.dataset.bound){card.dataset.bound="1";card.addEventListener("click",()=>openMember(card.dataset.member));}});
+  const calendarActions=[()=>showView("team"),()=>openOpportunity("pasta"),()=>openProjectTaskDirect("artluce","art-03"),()=>openProjectTaskDirect("studio","stu-02"),()=>openProjectTaskDirect("barcolana","bar-02"),()=>openOpportunity("vela"),()=>openOpportunity("lumea"),()=>openProjectTaskDirect("artluce","art-05")];
+  $$('.calendar-event').forEach((event,index)=>{event.dataset.category=["team","commercial","work","delivery","work","commercial","commercial","delivery"][index];event.tabIndex=0;if(!event.dataset.bound){event.dataset.bound="1";event.addEventListener("click",calendarActions[index]);event.addEventListener("keydown",e=>{if(e.key==="Enter")calendarActions[index]();});}});
 }
 
 function closeModal() {
@@ -400,6 +572,49 @@ document.addEventListener("keydown", event => {
   if (event.key === "Escape") { closeModal(); closeProjectWorkspace(); $("#projectDrawer").classList.remove("is-open"); rolePopover.hidden = true; $("#notifications").hidden = true; }
 });
 $("#searchButton").addEventListener("click", () => toast("Ricerca globale prevista nella prossima iterazione"));
+
+$("#searchButton").replaceWith($("#searchButton").cloneNode(true));
+$("#searchButton").addEventListener("click", openQuickSearch);
+$("#closeEntityPanel").addEventListener("click", closeEntityPanel);
+$("#newClientButton").addEventListener("click", openNewClientForm);
+$("#availabilityButton").addEventListener("click", () => openMember(currentRole));
+$("#findPersonButton").addEventListener("click", () => { showView("team"); openMember("luca"); });
+$('[data-decision="pasta"]').addEventListener("click", () => openOpportunity("pasta"));
+$('[data-decision="barcolana"]').addEventListener("click", () => openProjectTaskDirect("barcolana","bar-02"));
+$('[data-decision="luca"]').addEventListener("click", () => openMember("luca"));
+$$('[data-workspace-tab]').forEach(button => button.addEventListener("click", () => showWorkspaceTab(button.dataset.workspaceTab)));
+
+const projectFilterModes=["all","review","blocked","archive"];
+$$('.project-filters button').forEach((button,index)=>button.addEventListener("click",()=>{
+  $$('.project-filters button').forEach(item=>item.classList.toggle("is-active",item===button));
+  const mode=projectFilterModes[index];
+  $$('.project-row').forEach(row=>{ const key=row.dataset.project; const visible=mode==="all"||(mode==="review"&&projects[key].stateClass==="review")||(mode==="blocked"&&projects[key].stateClass==="blocked"); row.classList.toggle("is-filtered",!visible); });
+  if(mode==="archive") toast("Nessun progetto concluso in questa demo");
+}));
+$("#projectArchive").addEventListener("click",()=>$$('.project-filters button')[3].click());
+
+const calendarModes=["all","delivery","team","commercial"];
+$$('.calendar-mode button').forEach((button,index)=>button.addEventListener("click",()=>{
+  $$('.calendar-mode button').forEach(item=>item.classList.toggle("is-active",item===button));
+  const mode=calendarModes[index]; $$('.calendar-event').forEach(event=>event.style.display=mode==="all"||event.dataset.category===mode?"block":"none");
+}));
+let calendarOffset=0;
+const calendarControlButtons=$$('.calendar-controls button');
+function updateCalendarWeek(){ const days=$$('.day-column header strong'); days.forEach((day,index)=>day.textContent=String(21+index+calendarOffset*7)); $$('.calendar-event').forEach(event=>event.style.opacity=calendarOffset===0?"1":".16"); calendarControlButtons[1].textContent=calendarOffset===0?"Questa settimana":calendarOffset<0?"Settimana precedente":"Settimana successiva"; }
+calendarControlButtons[0].addEventListener("click",()=>{calendarOffset--;updateCalendarWeek();}); calendarControlButtons[1].addEventListener("click",()=>{calendarOffset=0;updateCalendarWeek();}); calendarControlButtons[2].addEventListener("click",()=>{calendarOffset++;updateCalendarWeek();});
+
+const notificationActions=[()=>openProjectTaskDirect("artluce","art-04"),()=>openProjectTaskDirect("barcolana","bar-02"),()=>openOpportunity("vela")];
+$$('#notifications>button').forEach((button,index)=>button.addEventListener("click",()=>{ $("#notifications").hidden=true; notificationActions[index](); }));
+const financeActions=[()=>openProjectDirect("artluce"),()=>openProjectDirect("studio"),()=>openProjectDirect("barcolana")];
+$$('.finance-list button').forEach((button,index)=>button.addEventListener("click",financeActions[index]));
+$("#exportFinance").addEventListener("click",()=>{ const csv="Voce,Importo\nConcordato,31900\nFatturato,25100\nIncassato,18300\nDistribuito,11840"; const link=document.createElement("a"); link.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"})); link.download="reframe-riepilogo-economico.csv"; link.click(); URL.revokeObjectURL(link.href); toast("Riepilogo CSV esportato"); });
+$(".period-select").addEventListener("change",event=>{ const values={"Ultimi 6 mesi":["€92.400","38%","86%","41%"],"Questo mese":["€18.300","42%","91%","46%"],"Quest'anno":["€146.800","39%","84%","43%"]}; $$("#view-insights .metric-row strong").forEach((item,index)=>item.textContent=values[event.target.value][index]); toast(`Insight aggiornati: ${event.target.value.toLowerCase()}`); });
+
+const clientSearch=$("#view-clients .search-field input");
+clientSearch.addEventListener("input",()=>{const q=clientSearch.value.toLowerCase();$$('.client-table .table-row').forEach(row=>row.style.display=row.textContent.toLowerCase().includes(q)?"grid":"none");});
+$$('#view-clients .filter-button').forEach((button,index)=>button.addEventListener("click",()=>{ $$('#view-clients .filter-button').forEach(item=>item.classList.toggle("is-active",item===button)); $$('.client-table .table-row').forEach((row,rowIndex)=>row.style.display=index===0||(index===1&&rowIndex!==1)||(index===2&&(rowIndex===0||rowIndex===2||rowIndex===3))?"grid":"none"); }));
+
+wireConnectedSurfaces();
 
 updateClock();
 setInterval(updateClock, 60000);
