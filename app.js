@@ -51,6 +51,34 @@ const projects = {
   lumea: { client: "Lumea", title: "Visualizzazione prodotto 3D", state: "Bloccato", stateClass: "blocked", progress: 22, deliveryLabel: "DA 3 GIORNI", delivery: "File CAD definitivi", detail: "Il lavoro riparte alla ricezione", people: [["AC", "Andrea", "Modellazione · render", "€1.200", "lilac"], ["LM", "Luca", "Animazione prodotto", "€780", "peach"]], missing: "Materiali cliente mancanti", missingText: "CAD e finiture non ancora ricevuti" }
 };
 
+const defaultProjectTasks = {
+  artluce: [
+    { id:"art-01", phase:"Pre-produzione", title:"Confermare scaletta e call sheet", status:"Completata", assignee:"Simone", due:"2026-09-20", description:"Validare orari, accessi, referenti e momenti chiave dell'evento con il cliente.", checklist:[["Call sheet condivisa",true],["Referente tecnico confermato",true]], comments:[{author:"Simone",initials:"SM",tone:"dark",time:"Ieri · 18:06",text:"Scaletta confermata con Artluce. Ho aggiunto 20 minuti per il setup luci.",files:[]}] },
+    { id:"art-02", phase:"Produzione", title:"Shooting fotografico evento", status:"Completata", assignee:"Andrea", due:"2026-09-21", description:"Copertura fotografica completa: allestimento, ospiti, interventi e dettagli tecnici.", checklist:[["Backup schede",true],["Selezione iniziale",true],["Liberatorie verificate",true]], comments:[{author:"Andrea",initials:"AC",tone:"lilac",time:"Oggi · 11:42",text:"Backup completato in doppia copia. La selezione iniziale contiene 186 scatti.",files:["selezione-contatti.pdf"]}] },
+    { id:"art-03", phase:"Post-produzione", title:"Selezione e color fotografia", status:"In lavorazione", assignee:"Andrea", due:"2026-09-22", description:"Preparare 46 fotografie post-prodotte, coerenti per colore e pronte in alta e web.", checklist:[["Selezione 46 scatti",true],["Color correction",true],["Controllo pelle e loghi",false],["Export alta + web",false]], comments:[{author:"Simone",initials:"SM",tone:"dark",time:"Oggi · 12:18",text:"@Andrea il cliente chiede di dare priorità alle fotografie del palco e dello sponsor principale.",files:["reference-cliente.jpg"]}] },
+    { id:"art-04", phase:"Post-produzione", title:"Montaggio video recap", status:"Da assegnare", assignee:"Da assegnare", due:"2026-09-25", description:"Montaggio recap da 60–75 secondi con versione verticale e orizzontale.", checklist:[["Assegnare montatore",false],["Selezione musica",false],["Prima versione",false],["Revisione cliente",false]], comments:[] },
+    { id:"art-05", phase:"Consegna", title:"Consegna pacchetto finale", status:"In attesa", assignee:"Andrea", due:"2026-09-26", description:"Raccogliere fotografie e video approvati nella cartella cliente e inviare il link finale.", checklist:[["Cartelle nominate",false],["Link verificato",false],["Consegna registrata",false]], comments:[] }
+  ],
+  barcolana: [
+    { id:"bar-01", phase:"Produzione", title:"Backup e sincronizzazione riprese", status:"Completata", assignee:"Andrea", due:"2026-09-18", description:"Ordinare camera, drone e audio per giornata e timecode.", checklist:[["Backup doppio",true],["Proxy generati",true]], comments:[] },
+    { id:"bar-02", phase:"Montaggio", title:"Montaggio film di bordo v03", status:"In revisione", assignee:"Andrea", due:"2026-09-22", description:"Integrare ritmo della partenza, audio ambiente e passaggio finale sull'equipaggio.", checklist:[["Feedback round 2",true],["Mix audio",true],["Titoli finali",false]], comments:[{author:"Simone",initials:"SM",tone:"dark",time:"Oggi · 10:20",text:"Il ritmo ora funziona. Restano quattro note puntuali prima dell'approvazione.",files:["feedback-v03.pdf"]}] },
+    { id:"bar-03", phase:"Revisione", title:"Approvazione montaggio finale", status:"In attesa", assignee:"Simone", due:"2026-09-23", description:"Controllo editoriale finale prima dell'invio all'equipaggio.", checklist:[["Controllo nomi",false],["Approvazione musica",false]], comments:[] },
+    { id:"bar-04", phase:"Consegna", title:"Master e versioni social", status:"Non iniziata", assignee:"Luca", due:"2026-09-24", description:"Esportare master 4K e adattamenti 16:9, 9:16 e 1:1.", checklist:[["Master 4K",false],["Reel 9:16",false],["Cover",false]], comments:[] }
+  ],
+  studio: [
+    { id:"stu-01", phase:"UX e contenuti", title:"Architettura pagine", status:"Completata", assignee:"Andrea", due:"2026-09-17", description:"Definire navigazione, gerarchie e contenuti necessari.", checklist:[["Sitemap",true],["Wireframe",true]], comments:[] },
+    { id:"stu-02", phase:"Design", title:"Homepage responsive v02", status:"In lavorazione", assignee:"Andrea", due:"2026-09-22", description:"Rifinire homepage su desktop, tablet e mobile con componenti definitivi.", checklist:[["Desktop",true],["Tablet",true],["Mobile",false],["Accessibilità",false]], comments:[{author:"Martina",initials:"MR",tone:"mint",time:"Oggi · 09:14",text:"Ho caricato il logotipo corretto e le varianti cromatiche definitive.",files:["brand-assets.zip"]}] },
+    { id:"stu-03", phase:"Design", title:"Componenti pagina servizi", status:"Bloccata", assignee:"Martina", due:"2026-09-24", description:"Progettare cards e sezioni servizi. In attesa dei testi dal cliente.", checklist:[["Ricevere testi",false],["Disegnare cards",false]], comments:[] },
+    { id:"stu-04", phase:"Sviluppo", title:"Implementazione frontend", status:"Non iniziata", assignee:"Andrea", due:"2026-09-29", description:"Sviluppare le pagine approvate e collegare i moduli.", checklist:[["Setup",false],["Componenti",false],["QA responsive",false]], comments:[] }
+  ],
+  lumea: [
+    { id:"lum-01", phase:"Preparazione", title:"Ricezione e verifica file CAD", status:"Bloccata", assignee:"Andrea", due:"2026-09-19", description:"Verificare geometrie, scala e nomenclatura dei file ricevuti.", checklist:[["File CAD ricevuti",false],["Materiali definiti",false]], comments:[{author:"Andrea",initials:"AC",tone:"lilac",time:"3 giorni fa",text:"Il file ricevuto è una preview senza geometrie modificabili. Ho richiesto STEP o IGES.",files:["preview-prodotto.jpg"]}] },
+    { id:"lum-02", phase:"3D", title:"Pulizia e modellazione", status:"In attesa", assignee:"Andrea", due:"2026-09-26", description:"Ottimizzare il modello e ricostruire i dettagli non presenti nel CAD.", checklist:[["Pulizia mesh",false],["Dettagli",false]], comments:[] },
+    { id:"lum-03", phase:"Lookdev", title:"Materiali e illuminazione", status:"Non iniziata", assignee:"Andrea", due:"2026-09-29", description:"Creare materiali prodotto e set luce coerente con il brand.", checklist:[["Materiali",false],["Lighting",false],["Test render",false]], comments:[] },
+    { id:"lum-04", phase:"Animazione", title:"Animazione prodotto", status:"Non iniziata", assignee:"Luca", due:"2026-10-02", description:"Animare esploso, rotazione e dettaglio funzionale.", checklist:[["Animatic",false],["Movimenti finali",false]], comments:[] }
+  ]
+};
+
 const $ = (selector, scope = document) => scope.querySelector(selector);
 const $$ = (selector, scope = document) => [...scope.querySelectorAll(selector)];
 
@@ -62,10 +90,14 @@ const saved = loadState();
 let currentRole = roles[saved.role] ? saved.role : "andrea";
 let opportunities = Array.isArray(saved.opportunities) ? saved.opportunities : [];
 let completedTasks = saved.completedTasks || {};
+let projectTasks = saved.projectTasks || structuredClone(defaultProjectTasks);
 let activeTaskFilter = "today";
+let activeProjectKey = "artluce";
+let activeProjectTaskId = null;
+let pendingFiles = [];
 
 function persist() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify({ role: currentRole, opportunities, completedTasks }));
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({ role: currentRole, opportunities, completedTasks, projectTasks }));
 }
 
 function escapeText(value = "") {
@@ -171,6 +203,108 @@ function openProject(projectKey) {
   responsibilitySection.innerHTML = `<h3>Responsabilità</h3>${project.people.map(person => `<div class="responsibility"><span class="avatar ${person[4]}">${person[0]}</span><span><strong>${escapeText(person[1])}</strong><small>${escapeText(person[2])}</small></span><em>${escapeText(person[3])}</em></div>`).join("")}<div class="responsibility missing"><span class="avatar">!</span><span><strong>${escapeText(project.missing)}</strong><small>${escapeText(project.missingText)}</small></span><em>!</em></div>`;
   drawer.classList.add("is-open");
   drawer.setAttribute("aria-hidden", "false");
+  activeProjectKey = projectKey;
+}
+
+function getActiveProjectTask() {
+  return (projectTasks[activeProjectKey] || []).find(task => task.id === activeProjectTaskId);
+}
+
+function statusClass(status) {
+  if (status === "Completata") return "done";
+  if (status === "Bloccata" || status === "Da assegnare") return "blocked";
+  if (status === "In revisione") return "review";
+  return "production";
+}
+
+function renderProjectWorkspace() {
+  const project = projects[activeProjectKey];
+  const tasks = projectTasks[activeProjectKey] || [];
+  const done = tasks.filter(task => task.status === "Completata").length;
+  const progress = tasks.length ? Math.round(done / tasks.length * 100) : 0;
+  $("#workspaceClient").textContent = project.client;
+  $("#workspaceTitle").textContent = project.title;
+  $("#workspaceState").textContent = project.state;
+  $("#workspaceState").className = `state-tag ${project.stateClass}`;
+  $("#workspaceProgress").textContent = `${progress}% task completate`;
+  $("#workspaceTaskCount").textContent = `${tasks.length} task`;
+  const phases = [...new Set(tasks.map(task => task.phase))];
+  $("#phaseList").innerHTML = phases.map(phase => {
+    const items = tasks.filter(task => task.phase === phase);
+    const complete = items.filter(task => task.status === "Completata").length;
+    return `<section class="phase"><header><strong>${escapeText(phase)}</strong><span>${complete}/${items.length}</span></header>${items.map(task => `<button class="phase-task${task.id === activeProjectTaskId ? " is-active" : ""}" data-project-task="${task.id}"><span class="task-dot ${task.status === "Completata" ? "done" : ""}"></span><span><strong>${escapeText(task.title)}</strong><small>${escapeText(task.assignee)} · ${escapeText(task.due || "Senza scadenza")}</small></span><em>${escapeText(task.status)}</em></button>`).join("")}</section>`;
+  }).join("");
+  $$('[data-project-task]').forEach(button => button.addEventListener("click", () => {
+    activeProjectTaskId = button.dataset.projectTask;
+    renderProjectWorkspace();
+    renderTaskEditor();
+  }));
+  renderComments();
+}
+
+function renderTaskEditor() {
+  const task = getActiveProjectTask();
+  if (!task) {
+    $("#taskEditor").innerHTML = `<div class="task-empty"><span>✓</span><h3>Seleziona una lavorazione</h3><p>Qui puoi gestire stato, responsabilità, scadenza, descrizione e checklist.</p></div>`;
+    return;
+  }
+  const statusOptions = ["Non iniziata","In attesa","Da assegnare","In lavorazione","In revisione","Bloccata","Completata"];
+  const assignees = ["Andrea","Simone","Martina","Luca","Da assegnare"];
+  $("#taskEditor").innerHTML = `<div class="task-headline"><button class="complete-task ${task.status === "Completata" ? "is-done" : ""}" id="completeProjectTask" aria-label="Completa task">${task.status === "Completata" ? "✓" : ""}</button><div><input id="projectTaskTitle" value="${escapeText(task.title)}" aria-label="Titolo task"><div class="task-code">${escapeText(task.id.toUpperCase())} · ${escapeText(task.phase)}</div></div></div><div class="task-fields"><label>Stato<select id="projectTaskStatus">${statusOptions.map(item => `<option${item === task.status ? " selected" : ""}>${item}</option>`).join("")}</select></label><label>Responsabile<select id="projectTaskAssignee">${assignees.map(item => `<option${item === task.assignee ? " selected" : ""}>${item}</option>`).join("")}</select></label><label>Scadenza<input id="projectTaskDue" type="date" value="${escapeText(task.due)}"></label></div><div class="task-description"><label>Descrizione<textarea id="projectTaskDescription">${escapeText(task.description)}</textarea></label></div><section class="task-editor-section"><div class="checklist-head"><span>Checklist</span><button id="addChecklistItem">＋ Aggiungi step</button></div><div class="checklist">${task.checklist.map((item,index) => `<label class="check-item ${item[1] ? "done" : ""}"><input type="checkbox" data-check-index="${index}"${item[1] ? " checked" : ""}><span>${escapeText(item[0])}</span></label>`).join("")}</div></section><div class="task-save-line"><small>Le modifiche vengono salvate in questa demo.</small><span><button class="secondary-button" id="openConversation">Commenti (${task.comments.length})</button> <button class="primary-button" id="saveProjectTask">Salva modifiche</button></span></div>`;
+  $("#saveProjectTask").addEventListener("click", saveActiveTask);
+  $("#openConversation").addEventListener("click", () => $(".task-conversation").classList.toggle("has-content"));
+  $("#completeProjectTask").addEventListener("click", () => { task.status = task.status === "Completata" ? "In lavorazione" : "Completata"; persist(); renderProjectWorkspace(); renderTaskEditor(); toast(task.status === "Completata" ? "Task completata" : "Task riaperta"); });
+  $$('[data-check-index]').forEach(input => input.addEventListener("change", () => { task.checklist[Number(input.dataset.checkIndex)][1] = input.checked; persist(); renderTaskEditor(); }));
+  $("#addChecklistItem").addEventListener("click", () => { const title = prompt("Nome del nuovo step"); if (title?.trim()) { task.checklist.push([title.trim(), false]); persist(); renderTaskEditor(); } });
+}
+
+function saveActiveTask() {
+  const task = getActiveProjectTask();
+  task.title = $("#projectTaskTitle").value.trim() || task.title;
+  task.status = $("#projectTaskStatus").value;
+  task.assignee = $("#projectTaskAssignee").value;
+  task.due = $("#projectTaskDue").value;
+  task.description = $("#projectTaskDescription").value.trim();
+  persist();
+  renderProjectWorkspace();
+  renderTaskEditor();
+  toast("Lavorazione aggiornata");
+}
+
+function renderComments() {
+  const task = getActiveProjectTask();
+  const comments = task?.comments || [];
+  $("#commentCount").textContent = comments.length;
+  $("#commentList").innerHTML = task ? (comments.length ? comments.map(comment => `<article class="comment"><span class="avatar ${comment.tone}">${escapeText(comment.initials)}</span><div class="comment-body"><div class="comment-meta"><strong>${escapeText(comment.author)}</strong><time>${escapeText(comment.time)}</time></div><p>${escapeText(comment.text)}</p>${(comment.files || []).map(file => `<div class="attachment-card"><i>▧</i><span><strong>${escapeText(file)}</strong><small>Allegato dimostrativo</small></span></div>`).join("")}</div></article>`).join("") : `<div class="task-empty"><p>Nessun commento. Inizia la conversazione su questa lavorazione.</p></div>`) : `<div class="task-empty"><p>Seleziona una lavorazione per vedere commenti e allegati.</p></div>`;
+}
+
+function openProjectWorkspace() {
+  $("#projectDrawer").classList.remove("is-open");
+  const tasks = projectTasks[activeProjectKey] || [];
+  activeProjectTaskId = tasks.find(task => task.status !== "Completata")?.id || tasks[0]?.id || null;
+  $("#projectWorkspace").classList.add("is-open");
+  $("#projectWorkspace").setAttribute("aria-hidden", "false");
+  document.body.style.overflow = "hidden";
+  renderProjectWorkspace();
+  renderTaskEditor();
+}
+
+function closeProjectWorkspace() {
+  $("#projectWorkspace").classList.remove("is-open");
+  $("#projectWorkspace").setAttribute("aria-hidden", "true");
+  $(".task-conversation").classList.remove("has-content");
+  document.body.style.overflow = "";
+}
+
+function showNewTaskForm() {
+  $("#taskEditor").innerHTML = `<div class="new-task-card"><h3>Nuova task</h3><label>Titolo<input id="newTaskTitle" placeholder="Es. Esportare versione verticale"></label><label>Fase<select id="newTaskPhase"><option>Pre-produzione</option><option>Produzione</option><option>Post-produzione</option><option>Revisione</option><option>Consegna</option></select></label><label>Responsabile<select id="newTaskAssignee"><option>Andrea</option><option>Simone</option><option>Martina</option><option>Luca</option><option>Da assegnare</option></select></label><div class="new-task-actions"><button class="secondary-button" id="cancelNewTask">Annulla</button><button class="primary-button" id="createProjectTask">Crea task</button></div></div>`;
+  $("#cancelNewTask").addEventListener("click", renderTaskEditor);
+  $("#createProjectTask").addEventListener("click", () => {
+    const title = $("#newTaskTitle").value.trim();
+    if (!title) return toast("Inserisci un titolo");
+    const task = { id:`${activeProjectKey.slice(0,3)}-${Date.now().toString().slice(-4)}`, phase:$("#newTaskPhase").value, title, status:"Non iniziata", assignee:$("#newTaskAssignee").value, due:"", description:"", checklist:[], comments:[] };
+    projectTasks[activeProjectKey].push(task); activeProjectTaskId = task.id; persist(); renderProjectWorkspace(); renderTaskEditor(); toast("Nuova task creata");
+  });
 }
 
 function closeModal() {
@@ -241,8 +375,29 @@ $("#opportunitySearch").addEventListener("input", event => {
 });
 $$('.project-row').forEach(row => row.addEventListener("click", () => openProject(row.dataset.project)));
 $("#closeDrawer").addEventListener("click", () => { $("#projectDrawer").classList.remove("is-open"); $("#projectDrawer").setAttribute("aria-hidden", "true"); });
+$("#openProjectWorkspace").addEventListener("click", openProjectWorkspace);
+$("#closeProjectWorkspace").addEventListener("click", closeProjectWorkspace);
+$("#addTaskButton").addEventListener("click", showNewTaskForm);
+$("#attachmentInput").addEventListener("change", event => {
+  pendingFiles = [...event.target.files].map(file => file.name);
+  const existing = $(".pending-files");
+  if (existing) existing.remove();
+  if (pendingFiles.length) event.target.closest("div").insertAdjacentHTML("beforebegin", `<p class="pending-files">${pendingFiles.map(escapeText).join(" · ")}</p>`);
+});
+$("#commentForm").addEventListener("submit", event => {
+  event.preventDefault();
+  const task = getActiveProjectTask();
+  if (!task) return toast("Seleziona prima una lavorazione");
+  const field = event.currentTarget.elements.comment;
+  const text = field.value.trim();
+  if (!text) return;
+  const role = roles[currentRole];
+  task.comments.push({ author:role.name, initials:role.initials, tone:role.tone, time:"Adesso", text, files:[...pendingFiles] });
+  field.value = ""; pendingFiles = []; $("#attachmentInput").value = ""; $(".pending-files")?.remove();
+  persist(); renderComments(); toast("Commento pubblicato");
+});
 document.addEventListener("keydown", event => {
-  if (event.key === "Escape") { closeModal(); $("#projectDrawer").classList.remove("is-open"); rolePopover.hidden = true; $("#notifications").hidden = true; }
+  if (event.key === "Escape") { closeModal(); closeProjectWorkspace(); $("#projectDrawer").classList.remove("is-open"); rolePopover.hidden = true; $("#notifications").hidden = true; }
 });
 $("#searchButton").addEventListener("click", () => toast("Ricerca globale prevista nella prossima iterazione"));
 
