@@ -1,706 +1,279 @@
-const STORAGE_KEY = "reframe-prototype-v2";
+const STORAGE_KEY = "reframe-live-v1";
+const $ = (s, root=document) => root.querySelector(s);
+const $$ = (s, root=document) => [...root.querySelectorAll(s)];
+const uid = prefix => prefix + "-" + Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+const esc = value => String(value ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const money = value => new Intl.NumberFormat("it-IT",{style:"currency",currency:"EUR",maximumFractionDigits:0}).format(Number(value)||0);
+const todayIso = () => new Date().toISOString().slice(0,10);
+const dateLabel = value => value ? new Intl.DateTimeFormat("it-IT",{day:"numeric",month:"short",year:"numeric"}).format(new Date(value+"T12:00:00")) : "Senza scadenza";
+const initials = name => (name||"?").split(/\s+/).slice(0,2).map(x=>x[0]).join("").toUpperCase();
 
-const roles = {
-  andrea: { name: "Andrea", full: "Andrea Castellazzo", initials: "AC", role: "Operativo · commerciale", summary: "Hai 5 cose che richiedono attenzione. Partiamo da quelle importanti.", tone: "lilac", finance: true, insights: false, focus: "Conferma la squadra per Artluce", focusText: "Il lavoro è confermato dal cliente, ma manca ancora chi si occuperà del montaggio." },
-  simone: { name: "Simone", full: "Simone Maffessoni", initials: "SM", role: "Direzione · amministratore", summary: "Hai 7 decisioni e 3 anomalie da risolvere. Il lavoro operativo resta in secondo piano.", tone: "dark", finance: true, insights: true, focus: "Sblocca le decisioni della squadra", focusText: "Tre progetti attendono una tua approvazione economica o organizzativa." },
-  martina: { name: "Martina", full: "Martina Riva", initials: "MR", role: "Operativa · graphic designer", summary: "Hai 4 attività, una consegna e una nuova revisione da gestire.", tone: "mint", finance: false, insights: false, focus: "Chiudi la revisione di Pasta Lab", focusText: "Il cliente ha lasciato quattro note sulla proposta visiva. La consegna è domani." },
-  luca: { name: "Luca", full: "Luca Moretti", initials: "LM", role: "Operativo · videomaker", summary: "Il tuo carico è oltre la capacità: prima risolviamo il conflitto, poi il resto.", tone: "peach", finance: false, insights: false, focus: "Segnala quale consegna spostare", focusText: "Questa settimana sei al 128% della capacità. Due consegne occupano la stessa giornata." }
-};
+const emptyState = {activeMemberId:null,team:[],clients:[],services:[],opportunities:[],projects:[]};
+function load(){
+  try{
+    const parsed=JSON.parse(localStorage.getItem(STORAGE_KEY));
+    if(!parsed) return structuredClone(emptyState);
+    return {...structuredClone(emptyState),...parsed,team:parsed.team||[],clients:parsed.clients||[],services:parsed.services||[],opportunities:parsed.opportunities||[],projects:parsed.projects||[]};
+  }catch{return structuredClone(emptyState)}
+}
+let state=load(), currentView=(location.hash.slice(1)||"today"), projectScope="all", projectStatus="open", opportunityFilter="all", myFilter="all";
+const labels={today:"Oggi",mywork:"Il mio lavoro",opportunities:"Opportunità",projects:"Progetti",calendar:"Calendario",clients:"Clienti",team:"Team",services:"Servizi e listini",finance:"Amministrazione",insights:"Insight"};
+const stages=["Da qualificare","In proposta","In attesa cliente","Confermata"];
+const statusMap={open:"Aperto",review:"In revisione",blocked:"Bloccato",done:"Concluso"};
+const taskStatuses=["Da fare","In lavorazione","In revisione","Bloccata","Completata"];
+function save(){localStorage.setItem(STORAGE_KEY,JSON.stringify(state))}
+function member(id){return state.team.find(x=>x.id===id)}
+function client(id){return state.clients.find(x=>x.id===id)}
+function service(id){return state.services.find(x=>x.id===id)}
+function project(id){return state.projects.find(x=>x.id===id)}
+function activeMember(){return member(state.activeMemberId)}
+function toast(message){const el=$("#toast");el.textContent=message;el.classList.add("show");clearTimeout(window.toastTimer);window.toastTimer=setTimeout(()=>el.classList.remove("show"),2200)}
+function btn(label,action,kind="primary"){return `<button class="button ${kind}" data-action="${action}">${label}</button>`}
+function avatar(person){return `<span class="avatar">${esc(person?.initials||initials(person?.name))}</span>`}
+function empty(title,text,action,label){return `<div class="empty"><b>${title}</b><span>${text}</span>${action?btn(label,action):""}</div>`}
+function heading(kicker,title,subtitle,action,label){return `<div class="heading"><div><p class="eyebrow">${kicker}</p><h1>${title}</h1><p>${subtitle}</p></div>${action?btn(label,action):""}</div>`}
+function options(items,current,placeholder="Seleziona"){return `<option value="">${placeholder}</option>`+items.map(x=>`<option value="${x.id}" ${x.id===current?"selected":""}>${esc(x.name)}</option>`).join("")}
+function formActions(deleteAction){return `<div class="form-actions">${deleteAction?`<button type="button" class="button danger" data-action="${deleteAction}">Elimina</button>`:""}<button type="button" class="button secondary" data-action="close-sheet">Annulla</button><button class="button primary">Salva</button></div>`}
 
-const labels = { today: "Oggi", mywork: "Il mio lavoro", opportunities: "Opportunità", projects: "Progetti", calendar: "Calendario", clients: "Clienti", team: "Team", finance: "Amministrazione", insights: "Insight" };
-
-const taskSets = {
-  andrea: [
-    ["Selezione fotografie evento Artluce", "Artluce · Consegna 01", "12:30", "today", "high"],
-    ["Chiamare Martina per disponibilità", "Pasta Lab · Opportunità", "14:00", "today", "medium"],
-    ["Inviare seconda versione homepage", "Studio Nord · Sito web", "17:00", "today", "medium"],
-    ["Confermare preventivo stampa", "ReFrame interno", "18:30", "today", "low"],
-    ["Ricontattare Garda Sailing", "Opportunità · Follow-up cliente", "Ieri", "late", "high"],
-    ["Preparare moodboard lancio prodotto", "Lumea · Direzione creativa", "Gio", "week", "low"]
-  ],
-  simone: [
-    ["Approvare stima Pasta Lab", "Decisione commerciale", "11:30", "today", "high"],
-    ["Assegnare montaggio Artluce", "Produzione · Blocco", "14:00", "today", "high"],
-    ["Revisionare montaggio Barcolana", "Round finale", "16:30", "today", "medium"],
-    ["Verificare fattura Artluce", "Amministrazione", "18:00", "today", "medium"],
-    ["Rispondere a Officina Maffei", "Opportunità senza prossima azione", "Ieri", "late", "high"],
-    ["Rivedere capacità team ottobre", "Pianificazione", "Ven", "week", "low"]
-  ],
-  martina: [
-    ["Integrare feedback Pasta Lab", "Branding · Revisione 02", "13:00", "today", "high"],
-    ["Esportare presentazione cliente", "La Vela Resort", "16:00", "today", "medium"],
-    ["Aggiornare componenti Studio Nord", "Sito web", "17:30", "today", "low"],
-    ["Caricare font definitivi", "Pasta Lab", "18:00", "today", "low"],
-    ["Confermare disponibilità shooting", "La Vela Resort", "Ieri", "late", "medium"],
-    ["Preparare proposta Officina Maffei", "Branding", "Ven", "week", "low"]
-  ],
-  luca: [
-    ["Montare teaser Artluce", "Video · Prima versione", "12:00", "today", "high"],
-    ["Esportare Barcolana v03", "Film di bordo", "15:00", "today", "high"],
-    ["Backup riprese Artluce", "Produzione", "17:00", "today", "medium"],
-    ["Segnalare conflitto di carico", "Team", "17:30", "today", "high"],
-    ["Inviare proxy al team", "Artluce", "Ieri", "late", "high"],
-    ["Preparare animatic Lumea", "Video prodotto + 3D", "Gio", "week", "medium"]
-  ]
-};
-
-const projects = {
-  artluce: { client: "Artluce Service", title: "Evento corporate — settembre", state: "In produzione", stateClass: "production", progress: 64, deliveryLabel: "OGGI · 17:00", delivery: "Selezione fotografica", detail: "46 fotografie post-prodotte", people: [["AC", "Andrea", "Fotografia · consegna", "€820", "lilac"], ["LM", "Luca", "Riprese video", "€650", "peach"]], missing: "Montaggio da assegnare", missingText: "Blocca la consegna video" },
-  barcolana: { client: "ReFrame Original", title: "Barcolana — film di bordo", state: "In revisione", stateClass: "review", progress: 84, deliveryLabel: "DOMANI · SIMONE", delivery: "Approvazione montaggio", detail: "Versione 03 · 4 feedback aperti", people: [["AC", "Andrea", "Riprese · montaggio", "€1.100", "lilac"], ["SM", "Simone", "Revisione finale", "Gestione", "dark"]], missing: "Quattro feedback aperti", missingText: "Serve approvazione prima della consegna" },
-  studio: { client: "Studio Nord", title: "Nuovo sito corporate", state: "In produzione", stateClass: "production", progress: 46, deliveryLabel: "OGGI · 17:00", delivery: "Homepage v02", detail: "Desktop, tablet e mobile", people: [["AC", "Andrea", "Design · sviluppo", "€1.450", "lilac"], ["MR", "Martina", "Identità visiva", "€520", "mint"]], missing: "Testi della pagina servizi", missingText: "In attesa del cliente" },
-  lumea: { client: "Lumea", title: "Visualizzazione prodotto 3D", state: "Bloccato", stateClass: "blocked", progress: 22, deliveryLabel: "DA 3 GIORNI", delivery: "File CAD definitivi", detail: "Il lavoro riparte alla ricezione", people: [["AC", "Andrea", "Modellazione · render", "€1.200", "lilac"], ["LM", "Luca", "Animazione prodotto", "€780", "peach"]], missing: "Materiali cliente mancanti", missingText: "CAD e finiture non ancora ricevuti" }
-};
-
-const defaultProjectTasks = {
-  artluce: [
-    { id:"art-01", phase:"Pre-produzione", title:"Confermare scaletta e call sheet", status:"Completata", assignee:"Simone", due:"2026-09-20", description:"Validare orari, accessi, referenti e momenti chiave dell'evento con il cliente.", checklist:[["Call sheet condivisa",true],["Referente tecnico confermato",true]], comments:[{author:"Simone",initials:"SM",tone:"dark",time:"Ieri · 18:06",text:"Scaletta confermata con Artluce. Ho aggiunto 20 minuti per il setup luci.",files:[]}] },
-    { id:"art-02", phase:"Produzione", title:"Shooting fotografico evento", status:"Completata", assignee:"Andrea", due:"2026-09-21", description:"Copertura fotografica completa: allestimento, ospiti, interventi e dettagli tecnici.", checklist:[["Backup schede",true],["Selezione iniziale",true],["Liberatorie verificate",true]], comments:[{author:"Andrea",initials:"AC",tone:"lilac",time:"Oggi · 11:42",text:"Backup completato in doppia copia. La selezione iniziale contiene 186 scatti.",files:["selezione-contatti.pdf"]}] },
-    { id:"art-03", phase:"Post-produzione", title:"Selezione e color fotografia", status:"In lavorazione", assignee:"Andrea", due:"2026-09-22", description:"Preparare 46 fotografie post-prodotte, coerenti per colore e pronte in alta e web.", checklist:[["Selezione 46 scatti",true],["Color correction",true],["Controllo pelle e loghi",false],["Export alta + web",false]], comments:[{author:"Simone",initials:"SM",tone:"dark",time:"Oggi · 12:18",text:"@Andrea il cliente chiede di dare priorità alle fotografie del palco e dello sponsor principale.",files:["reference-cliente.jpg"]}] },
-    { id:"art-04", phase:"Post-produzione", title:"Montaggio video recap", status:"Da assegnare", assignee:"Da assegnare", due:"2026-09-25", description:"Montaggio recap da 60–75 secondi con versione verticale e orizzontale.", checklist:[["Assegnare montatore",false],["Selezione musica",false],["Prima versione",false],["Revisione cliente",false]], comments:[] },
-    { id:"art-05", phase:"Consegna", title:"Consegna pacchetto finale", status:"In attesa", assignee:"Andrea", due:"2026-09-26", description:"Raccogliere fotografie e video approvati nella cartella cliente e inviare il link finale.", checklist:[["Cartelle nominate",false],["Link verificato",false],["Consegna registrata",false]], comments:[] }
-  ],
-  barcolana: [
-    { id:"bar-01", phase:"Produzione", title:"Backup e sincronizzazione riprese", status:"Completata", assignee:"Andrea", due:"2026-09-18", description:"Ordinare camera, drone e audio per giornata e timecode.", checklist:[["Backup doppio",true],["Proxy generati",true]], comments:[] },
-    { id:"bar-02", phase:"Montaggio", title:"Montaggio film di bordo v03", status:"In revisione", assignee:"Andrea", due:"2026-09-22", description:"Integrare ritmo della partenza, audio ambiente e passaggio finale sull'equipaggio.", checklist:[["Feedback round 2",true],["Mix audio",true],["Titoli finali",false]], comments:[{author:"Simone",initials:"SM",tone:"dark",time:"Oggi · 10:20",text:"Il ritmo ora funziona. Restano quattro note puntuali prima dell'approvazione.",files:["feedback-v03.pdf"]}] },
-    { id:"bar-03", phase:"Revisione", title:"Approvazione montaggio finale", status:"In attesa", assignee:"Simone", due:"2026-09-23", description:"Controllo editoriale finale prima dell'invio all'equipaggio.", checklist:[["Controllo nomi",false],["Approvazione musica",false]], comments:[] },
-    { id:"bar-04", phase:"Consegna", title:"Master e versioni social", status:"Non iniziata", assignee:"Luca", due:"2026-09-24", description:"Esportare master 4K e adattamenti 16:9, 9:16 e 1:1.", checklist:[["Master 4K",false],["Reel 9:16",false],["Cover",false]], comments:[] }
-  ],
-  studio: [
-    { id:"stu-01", phase:"UX e contenuti", title:"Architettura pagine", status:"Completata", assignee:"Andrea", due:"2026-09-17", description:"Definire navigazione, gerarchie e contenuti necessari.", checklist:[["Sitemap",true],["Wireframe",true]], comments:[] },
-    { id:"stu-02", phase:"Design", title:"Homepage responsive v02", status:"In lavorazione", assignee:"Andrea", due:"2026-09-22", description:"Rifinire homepage su desktop, tablet e mobile con componenti definitivi.", checklist:[["Desktop",true],["Tablet",true],["Mobile",false],["Accessibilità",false]], comments:[{author:"Martina",initials:"MR",tone:"mint",time:"Oggi · 09:14",text:"Ho caricato il logotipo corretto e le varianti cromatiche definitive.",files:["brand-assets.zip"]}] },
-    { id:"stu-03", phase:"Design", title:"Componenti pagina servizi", status:"Bloccata", assignee:"Martina", due:"2026-09-24", description:"Progettare cards e sezioni servizi. In attesa dei testi dal cliente.", checklist:[["Ricevere testi",false],["Disegnare cards",false]], comments:[] },
-    { id:"stu-04", phase:"Sviluppo", title:"Implementazione frontend", status:"Non iniziata", assignee:"Andrea", due:"2026-09-29", description:"Sviluppare le pagine approvate e collegare i moduli.", checklist:[["Setup",false],["Componenti",false],["QA responsive",false]], comments:[] }
-  ],
-  lumea: [
-    { id:"lum-01", phase:"Preparazione", title:"Ricezione e verifica file CAD", status:"Bloccata", assignee:"Andrea", due:"2026-09-19", description:"Verificare geometrie, scala e nomenclatura dei file ricevuti.", checklist:[["File CAD ricevuti",false],["Materiali definiti",false]], comments:[{author:"Andrea",initials:"AC",tone:"lilac",time:"3 giorni fa",text:"Il file ricevuto è una preview senza geometrie modificabili. Ho richiesto STEP o IGES.",files:["preview-prodotto.jpg"]}] },
-    { id:"lum-02", phase:"3D", title:"Pulizia e modellazione", status:"In attesa", assignee:"Andrea", due:"2026-09-26", description:"Ottimizzare il modello e ricostruire i dettagli non presenti nel CAD.", checklist:[["Pulizia mesh",false],["Dettagli",false]], comments:[] },
-    { id:"lum-03", phase:"Lookdev", title:"Materiali e illuminazione", status:"Non iniziata", assignee:"Andrea", due:"2026-09-29", description:"Creare materiali prodotto e set luce coerente con il brand.", checklist:[["Materiali",false],["Lighting",false],["Test render",false]], comments:[] },
-    { id:"lum-04", phase:"Animazione", title:"Animazione prodotto", status:"Non iniziata", assignee:"Luca", due:"2026-10-02", description:"Animare esploso, rotazione e dettaglio funzionale.", checklist:[["Animatic",false],["Movimenti finali",false]], comments:[] }
-  ]
-};
-
-const opportunityData = {
-  garda:{client:"Garda Sailing",service:"Foto + video regata",stage:"Da qualificare",owner:"Andrea",estimate:"€1.400–2.600",next:"Ricontattare il cliente",date:"Oggi",contact:"Giulia Rinaldi",notes:"Richiesta nata dopo un incontro al circolo. Da definire numero di giornate e utilizzo drone.",clientKey:"garda"},
-  officina:{client:"Officina Maffei",service:"Nuova identità visiva",stage:"Da qualificare",owner:"Simone",estimate:"€2.800–4.200",next:"Capire perimetro e tempi",date:"Domani",contact:"Marco Maffei",notes:"Rebranding completo con possibile estensione al sito web.",clientKey:"officina"},
-  pasta:{client:"Pasta Lab",service:"Campagna lancio + contenuti",stage:"In proposta",owner:"Andrea",estimate:"€1.800–2.400",next:"Call di allineamento",date:"Oggi · 14:00",contact:"Elena Rossi",notes:"Proposta quasi completa. Da validare il numero di reel e il coinvolgimento di Martina.",clientKey:"pasta"},
-  vela:{client:"La Vela Resort",service:"Shooting stagionale",stage:"In proposta",owner:"Martina",estimate:"€2.200",next:"Inviare proposta finale",date:"Mercoledì",contact:"Francesca Lodi",notes:"Fotografia lifestyle e ambienti per campagna estiva.",clientKey:"vela"},
-  lumea:{client:"Lumea",service:"Video prodotto + 3D",stage:"In attesa cliente",owner:"Simone",estimate:"€4.600",next:"Follow-up decisione",date:"Venerdì",contact:"Davide Conti",notes:"Proposta inviata. Il progetto operativo è bloccato in attesa dei file CAD.",clientKey:"lumea"}
-};
-
-const clientData = {
-  artluce:{name:"Artluce Service",sector:"Eventi e service",owner:"Andrea Castellazzo",contact:"Paolo Bianchi",email:"produzione@artluce.it",value:"€18.600",jobs:"8",agreement:"5% commerciale sulle produzioni acquisite",projects:["artluce"],opportunities:[]},
-  pasta:{name:"Pasta Lab",sector:"Food & hospitality",owner:"Simone Maffessoni",contact:"Elena Rossi",email:"marketing@pastalab.it",value:"€4.800",jobs:"2",agreement:"Nessun accordo permanente",projects:[],opportunities:["pasta"]},
-  lumea:{name:"Lumea",sector:"Design prodotto",owner:"Simone Maffessoni",contact:"Davide Conti",email:"design@lumea.it",value:"€12.200",jobs:"4",agreement:"Listino 3D concordato per varianti prodotto",projects:["lumea"],opportunities:["lumea"]},
-  vela:{name:"La Vela Resort",sector:"Hospitality",owner:"Martina Riva",contact:"Francesca Lodi",email:"marketing@lavelarestort.it",value:"€9.100",jobs:"5",agreement:"Produzione stagionale primavera/estate",projects:[],opportunities:["vela"]},
-  garda:{name:"Garda Sailing",sector:"Sport e vela",owner:"Andrea Castellazzo",contact:"Giulia Rinaldi",email:"eventi@gardasailing.it",value:"€0",jobs:"0",agreement:"Nuovo contatto",projects:[],opportunities:["garda"]},
-  officina:{name:"Officina Maffei",sector:"Industria",owner:"Simone Maffessoni",contact:"Marco Maffei",email:"info@officinamaffei.it",value:"€0",jobs:"0",agreement:"Nuovo contatto",projects:[],opportunities:["officina"]}
-};
-
-const memberData = {
-  andrea:{name:"Andrea Castellazzo",initials:"AC",tone:"lilac",skills:"Visual designer · Foto · Video · 3D",availability:"Disponibile",load:"82%",capacity:"32 ore disponibili",projects:["artluce","barcolana","studio","lumea"]},
-  luca:{name:"Luca Moretti",initials:"LM",tone:"peach",skills:"Videomaker · Montaggio · Motion",availability:"Sovraccarico",load:"128%",capacity:"Conflitto su 2 consegne",projects:["artluce","lumea"]},
-  martina:{name:"Martina Riva",initials:"MR",tone:"mint",skills:"Graphic design · Branding",availability:"Disponibile",load:"54%",capacity:"18 ore disponibili",projects:["studio"]},
-  simone:{name:"Simone Maffessoni",initials:"SM",tone:"dark",skills:"Direzione · Commerciale · PM",availability:"Limitato",load:"76%",capacity:"7 decisioni aperte",projects:["artluce","barcolana"]}
-};
-
-const taskDestinations = {
-  "Selezione fotografie evento Artluce":["artluce","art-03"], "Inviare seconda versione homepage":["studio","stu-02"], "Preparare moodboard lancio prodotto":["lumea","lum-03"], "Montare teaser Artluce":["artluce","art-04"], "Esportare Barcolana v03":["barcolana","bar-02"], "Backup riprese Artluce":["artluce","art-02"], "Preparare animatic Lumea":["lumea","lum-04"], "Revisionare montaggio Barcolana":["barcolana","bar-02"], "Assegnare montaggio Artluce":["artluce","art-04"], "Aggiornare componenti Studio Nord":["studio","stu-02"]
-};
-
-const agendaData = {
-  andrea:[{time:"09:00",label:"Team",title:"Stand-up ReFrame",meta:"Team · 30 min",target:{type:"member",key:"simone"},completed:true},{time:"14:00",label:"Opportunità",title:"Call Pasta Lab",meta:"Andrea + Simone · 45 min",target:{type:"opportunity",key:"pasta"}},{time:"17:00",label:"Consegna",title:"Homepage Studio Nord",meta:"Versione 02",target:{type:"task",project:"studio",task:"stu-02"}}],
-  simone:[{time:"11:30",label:"Decisione",title:"Stima Pasta Lab",meta:"Approvazione commerciale",target:{type:"opportunity",key:"pasta"}},{time:"14:00",label:"Blocco",title:"Assegnazione montaggio Artluce",meta:"Produzione",target:{type:"task",project:"artluce",task:"art-04"}},{time:"16:30",label:"Revisione",title:"Montaggio Barcolana",meta:"Round finale",target:{type:"task",project:"barcolana",task:"bar-03"}}],
-  martina:[{time:"13:00",label:"Revisione",title:"Feedback Pasta Lab",meta:"Branding · round 02",target:{type:"opportunity",key:"pasta"}},{time:"16:00",label:"Consegna",title:"Presentazione La Vela",meta:"Cliente",target:{type:"opportunity",key:"vela"}},{time:"17:30",label:"Lavorazione",title:"Componenti Studio Nord",meta:"Sito web",target:{type:"task",project:"studio",task:"stu-03"}}],
-  luca:[{time:"12:00",label:"Montaggio",title:"Teaser Artluce",meta:"Prima versione",target:{type:"task",project:"artluce",task:"art-04"}},{time:"15:00",label:"Consegna",title:"Barcolana v03",meta:"Film di bordo",target:{type:"task",project:"barcolana",task:"bar-04"}},{time:"17:30",label:"Pianificazione",title:"Conflitto di carico",meta:"Team",target:{type:"member",key:"luca"}}]
-};
-
-const $ = (selector, scope = document) => scope.querySelector(selector);
-const $$ = (selector, scope = document) => [...scope.querySelectorAll(selector)];
-
-function loadState() {
-  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; } catch { return {}; }
+function profileRender(){
+  const person=activeMember();
+  $("#profileAvatar").textContent=$("#topAvatar").textContent=person?.initials||initials(person?.name);
+  $("#profileName").textContent=person?.name||"Configura profilo";
+  $("#profileRole").textContent=person?.role||"Nessuna persona selezionata";
+  $("#topName").textContent=person?.name?.split(" ")[0]||"Profilo";
+  $("#profileOptions").innerHTML=state.team.length?state.team.map(x=>`<button data-profile="${x.id}">${avatar(x)}<span><strong>${esc(x.name)}</strong><small>${esc(x.role||"Membro del team")}</small></span></button>`).join(""):`<button data-action="new-member">＋ Crea la prima persona</button>`;
+  $("#myCount").textContent=myItems().length;
+}
+function navRender(){
+  const keys=["today","mywork","opportunities","projects","calendar","clients","team","services","finance","insights"];
+  $("#mobileNav").innerHTML=keys.slice(0,8).map(k=>`<button data-view="${k}" class="${k===currentView?"active":""}">${labels[k]}</button>`).join("");
+  $$('[data-view]').forEach(b=>b.classList.toggle("active",b.dataset.view===currentView));
+}
+function showView(view){
+  if(!labels[view]) view="today";
+  currentView=view; location.hash=view;
+  $$(".view").forEach(x=>x.classList.toggle("active",x.id==="view-"+view));
+  $("#viewLabel").textContent=labels[view];
+  navRender(); renderView(view); window.scrollTo({top:0,behavior:"smooth"});
+}
+function renderAll(){profileRender();navRender();renderView(currentView)}
+function renderView(view){
+  ({today:renderToday,mywork:renderMyWork,opportunities:renderOpportunities,projects:renderProjects,calendar:renderCalendar,clients:renderClients,team:renderTeam,services:renderServices,finance:renderFinance,insights:renderInsights}[view]||renderToday)();
 }
 
-const saved = loadState();
-let currentRole = roles[saved.role] ? saved.role : "andrea";
-let opportunities = Array.isArray(saved.opportunities) ? saved.opportunities : [];
-let completedTasks = saved.completedTasks || {};
-let projectTasks = saved.projectTasks || structuredClone(defaultProjectTasks);
-let entityEdits = saved.entityEdits || {};
-let activeTaskFilter = "today";
-let activeMyWorkFilter = "all";
-let personalFeedItems = [];
-let activeProjectKey = "artluce";
-let activeProjectTaskId = null;
-let pendingFiles = [];
-
-function persist() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify({ role: currentRole, opportunities, completedTasks, projectTasks, entityEdits }));
+function allTasks(){return state.projects.flatMap(p=>(p.tasks||[]).map(t=>({...t,projectId:p.id,projectTitle:p.title,clientId:p.clientId})))}
+function myItems(){
+  if(!state.activeMemberId)return[];
+  const tasks=allTasks().filter(t=>t.assigneeId===state.activeMemberId&&t.status!=="Completata").map(t=>({...t,type:"task"}));
+  const opps=state.opportunities.filter(o=>o.ownerId===state.activeMemberId&&o.stage!=="Confermata").map(o=>({id:o.id,title:o.nextAction||"Aggiorna opportunità",due:o.followup,status:o.stage,type:"opportunity",clientId:o.clientId}));
+  return [...tasks,...opps].sort((a,b)=>(a.due||"9999").localeCompare(b.due||"9999"));
 }
-
-function escapeText(value = "") {
-  return String(value).replace(/[&<>'"]/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[char]);
-}
-
-function toast(message) {
-  $("#toastText").textContent = message;
-  $("#toast").classList.add("is-visible");
-  clearTimeout(window.toastTimer);
-  window.toastTimer = setTimeout(() => $("#toast").classList.remove("is-visible"), 2400);
-}
-
-function showView(view) {
-  if (!$("#view-" + view)) return;
-  closeEntityPanel();
-  $$('[data-view-panel]').forEach(panel => panel.classList.toggle("is-active", panel.dataset.viewPanel === view));
-  $$('[data-view]').forEach(button => button.classList.toggle("is-active", button.dataset.view === view));
-  $("#currentViewLabel").textContent = labels[view];
-  if (view === "mywork") renderPersonalFeed();
-  history.replaceState(null, "", "#" + view);
-  window.scrollTo({ top: 0, behavior: "smooth" });
-}
-
-function renderTasks() {
-  const tasks = taskSets[currentRole];
-  $("#taskList").innerHTML = tasks.map((task, index) => {
-    const [title, context, time, state, priority] = task;
-    const id = `${currentRole}-${index}`;
-    const checked = completedTasks[id] ? " checked" : "";
-    const visible = state === activeTaskFilter ? "grid" : "none";
-    return `<label class="task-row" data-task-state="${state}" style="display:${visible}"><input type="checkbox" data-task-id="${id}"${checked} /><span class="custom-check"></span><span class="task-main"><strong>${escapeText(title)}</strong><small>${escapeText(context)}</small></span><time>${escapeText(time)}</time><i class="priority ${priority}"></i></label>`;
-  }).join("");
-  const counts = { today: 0, late: 0, week: 0 };
-  tasks.forEach(task => counts[task[3]]++);
-  $$('[data-task-filter]').forEach(button => {
-    button.classList.toggle("is-active", button.dataset.taskFilter === activeTaskFilter);
-    const count = button.querySelector("span");
-    if (count) count.textContent = counts[button.dataset.taskFilter];
-  });
-  $$('.task-row input').forEach(input => input.addEventListener("change", () => {
-    completedTasks[input.dataset.taskId] = input.checked;
-    persist();
-    renderPersonalFeed();
-    toast(input.checked ? "Attività completata" : "Attività riaperta");
-  }));
-  $$('.task-row .task-main').forEach(element => element.addEventListener("click", event => {
-    const title = element.querySelector("strong").textContent;
-    const destination = taskDestinations[title];
-    if (destination) { event.preventDefault(); event.stopPropagation(); openProjectTaskDirect(destination[0], destination[1]); return; }
-    if (title.includes("Garda Sailing")) { event.preventDefault(); event.stopPropagation(); openOpportunity("garda"); }
-    else if (title.includes("Martina")) { event.preventDefault(); event.stopPropagation(); openOpportunity("pasta"); }
-  }));
-}
-
-function personalActionTarget(title) {
-  if (taskDestinations[title]) return {type:"task",project:taskDestinations[title][0],task:taskDestinations[title][1]};
-  if (title.includes("Garda Sailing")) return {type:"opportunity",key:"garda"};
-  if (title.includes("Pasta Lab") || title.includes("Martina")) return {type:"opportunity",key:"pasta"};
-  if (title.includes("Officina Maffei")) return {type:"opportunity",key:"officina"};
-  if (title.includes("La Vela")) return {type:"opportunity",key:"vela"};
-  if (title.includes("Luca") || title.includes("carico")) return {type:"member",key:"luca"};
-  if (title.includes("Artluce")) return {type:"project",key:"artluce"};
-  return {type:"generic"};
-}
-
-function buildPersonalFeed() {
-  const role = roles[currentRole];
-  const today = new Date();
-  const todayIso = today.toISOString().slice(0,10);
-  const projectItems = Object.entries(projectTasks).flatMap(([projectKey,tasks]) => tasks.filter(task => task.assignee === role.name && task.status !== "Completata").map(task => ({
-    id:`project-${projectKey}-${task.id}`,title:task.title,context:`${projects[projectKey].client} · ${task.phase}`,kind:task.status === "In revisione" ? "Revisione" : "Progetto",kindKey:task.status === "In revisione" ? "review" : "project",status:task.status,due:task.due||"Senza scadenza",group:task.due && task.due < todayIso ? "overdue" : task.due === todayIso ? "today" : "upcoming",target:{type:"task",project:projectKey,task:task.id}
-  })));
-  const projectTargets = new Set(projectItems.map(item=>`${item.target.project}:${item.target.task}`));
-  const actionItems = taskSets[currentRole].map((task,index) => {
-    const [title,context,time,state,priority]=task; const target=personalActionTarget(title);
-    if(target.type==="task" && projectTargets.has(`${target.project}:${target.task}`)) return null;
-    return {id:`action-${currentRole}-${index}`,title,context,kind:context.includes("Opportunità")||context.includes("commercial")?"Commerciale":"Azione",kindKey:context.includes("Opportunità")||context.includes("commercial")?"commercial":"action",status:priority==="high"?"Priorità alta":"Da fare",due:time,group:state==="late"?"overdue":state==="today"?"today":"upcoming",target};
-  }).filter(Boolean);
-  const commercialItems = Object.entries(opportunityData).filter(([,item]) => item.owner === role.name && !["Confermata","Persa"].includes((entityEdits[`opp-${Object.keys(opportunityData).find(key=>opportunityData[key]===item)}`]||{}).stage||item.stage)).map(([key,item]) => {
-    const edited={...item,...(entityEdits[`opp-${key}`]||{})};
-    return {id:`commercial-${key}`,title:edited.next,context:`${edited.client} · ${edited.service}`,kind:"Commerciale",kindKey:"commercial",status:edited.stage,due:edited.date,group:String(edited.date).includes("Oggi")?"today":"upcoming",target:{type:"opportunity",key}};
-  });
-  const unique = new Map();
-  [...projectItems,...actionItems,...commercialItems].forEach(item=>unique.set(item.id,item));
-  return [...unique.values()];
-}
-
-function openPersonalFeedItem(item) {
-  if (item.target.type === "task") return openProjectTaskDirect(item.target.project,item.target.task);
-  if (item.target.type === "opportunity") return openOpportunity(item.target.key);
-  if (item.target.type === "member") return openMember(item.target.key);
-  if (item.target.type === "project") return openProjectDirect(item.target.key);
-  openEntityPanel("Azione personale", item.title, `<div class="entity-summary"><div><span>Stato</span><strong>${escapeText(item.status)}</strong></div><div><span>Scadenza</span><strong>${escapeText(item.due)}</strong></div><div><span>Responsabile</span><strong>${escapeText(roles[currentRole].name)}</strong></div></div><section class="entity-section"><h3>Contesto</h3><div class="activity-note">${escapeText(item.context)}</div><button class="primary-button full" id="completePersonalAction">Segna come completata</button></section>`);
-  $("#completePersonalAction").addEventListener("click",()=>{completedTasks[item.id]=true;persist();renderPersonalFeed();closeEntityPanel();toast("Azione completata");});
-}
-
-function renderPersonalFeed() {
-  if (!$("#personalFeed")) return;
-  personalFeedItems = buildPersonalFeed().filter(item=>!completedTasks[item.id]);
-  const query = ($("#myWorkSearch")?.value||"").trim().toLowerCase();
-  const filtered = personalFeedItems.filter(item => (activeMyWorkFilter==="all"||item.group===activeMyWorkFilter||item.kindKey===activeMyWorkFilter) && (!query||`${item.title} ${item.context} ${item.status}`.toLowerCase().includes(query)));
-  const groups=[["overdue","In ritardo"],["today","Oggi"],["upcoming","Prossimi giorni"]];
-  $("#personalFeed").innerHTML=groups.map(([key,label])=>{const items=filtered.filter(item=>item.group===key);if(!items.length)return "";return `<section class="feed-group"><header><strong>${label}</strong><span>${items.length} attività</span></header>${items.map(item=>`<button class="feed-row" data-feed-id="${escapeText(item.id)}"><span class="feed-check"></span><span class="feed-row-main"><strong>${escapeText(item.title)}</strong><small>${escapeText(item.status)}</small></span><span class="feed-context">${escapeText(item.context)}</span><span class="feed-kind ${item.kindKey}">${escapeText(item.kind)}</span><span class="feed-due ${key==="overdue"?"overdue":""}">${escapeText(item.due)}</span><span class="feed-arrow">→</span></button>`).join("")}</section>`}).join("")||`<div class="feed-empty">Nessuna attività corrisponde ai filtri selezionati.</div>`;
-  const late=personalFeedItems.filter(item=>item.group==="overdue").length,today=personalFeedItems.filter(item=>item.group==="today").length,reviews=personalFeedItems.filter(item=>item.kindKey==="review").length;
-  $("#myWorkOpenCount").textContent=personalFeedItems.length;$("#myWorkLateCount").textContent=late;$("#myWorkTodayCount").textContent=today;$("#myWorkReviewCount").textContent=reviews;$("#myWorkNavCount").textContent=personalFeedItems.length;
-  $$('[data-feed-id]').forEach(button=>button.addEventListener("click",()=>openPersonalFeedItem(personalFeedItems.find(item=>item.id===button.dataset.feedId))));
-}
-
-function openTarget(target) {
-  if(target.type==="task") return openProjectTaskDirect(target.project,target.task);
-  if(target.type==="opportunity") return openOpportunity(target.key);
-  if(target.type==="member") return openMember(target.key);
-  if(target.type==="project") return openProjectDirect(target.key);
-}
-
-function renderAgenda() {
-  const items=agendaData[currentRole];
-  $(".agenda").innerHTML=items.map((item,index)=>`<div class="agenda-time ${index===1?"current":""}"><time>${escapeText(item.time)}</time><span></span></div><button class="agenda-event ${item.completed?"completed":index===1?"purple":""}" data-agenda-index="${index}"><small>${escapeText(item.completed?"Completato":item.label)}</small><strong>${escapeText(item.title)}</strong><span>${escapeText(item.meta)}</span></button>`).join("");
-  $$('[data-agenda-index]').forEach(button=>button.addEventListener("click",()=>openTarget(items[Number(button.dataset.agendaIndex)].target)));
-}
-
-function applyRole(key, notify = true) {
-  const role = roles[key];
-  currentRole = key;
-  $$('[data-person-name]').forEach(element => element.textContent = role.name);
-  $$('[data-person-role]').forEach(element => element.textContent = role.role);
-  $$('[data-avatar]').forEach(element => {
-    const small = element.classList.contains("small") ? " small" : "";
-    element.textContent = role.initials;
-    element.className = "avatar" + small + " " + role.tone;
-  });
-  $("#roleSummary").textContent = role.summary;
-  $(".accent-card h2").textContent = role.focus;
-  $(".accent-card > p").textContent = role.focusText;
-  $$('[data-permission="finance"]').forEach(element => element.classList.toggle("role-restricted", !role.finance));
-  $$('[data-permission="insights"]').forEach(element => element.classList.toggle("role-restricted", !role.insights));
-  $$('#rolePopover [data-role]').forEach(button => button.querySelector("b").textContent = button.dataset.role === key ? "✓" : "");
-  $("#rolePopover").hidden = true;
-  if ((!role.finance && location.hash === "#finance") || (!role.insights && location.hash === "#insights")) showView("today");
-  activeTaskFilter = "today";
-  renderTasks();
-  renderAgenda();
-  renderPersonalFeed();
-  renderOpportunities();
-  persist();
-  if (notify) toast(`Vista aggiornata per ${role.full}`);
-}
-
-function renderOpportunities() {
-  $$(".opportunity-card.is-created").forEach(card => card.remove());
-  const target = $(".kanban-column .kanban-cards");
-  opportunities.forEach(item => {
-    const opportunityKey = `created-${item.createdAt}`;
-    opportunityData[opportunityKey] = {client:item.client,service:item.request||item.service||"Da definire",stage:"Da qualificare",owner:(item.owner||"Da assegnare").split(" ")[0],estimate:item.budget||"Da stimare",next:"Qualificare l'opportunità",date:item.followup||"Da pianificare",contact:"Da inserire",notes:item.request||"",clientKey:opportunityKey};
-    clientData[opportunityKey] = clientData[opportunityKey] || {name:item.client,sector:"Da definire",owner:item.owner||"Da assegnare",contact:"Da inserire",email:"",value:"€0",jobs:"0",agreement:"Nuovo contatto",projects:[],opportunities:[opportunityKey]};
-    const article = document.createElement("article");
-    article.className = "opportunity-card is-created";
-    article.dataset.opportunity = opportunityKey;
-    article.dataset.owner = item.owner.split(" ")[0];
-    const initials = item.client.split(/\s+/).slice(0, 2).map(word => word[0]).join("").toUpperCase();
-    const followup = item.followup ? new Date(item.followup + "T12:00:00").toLocaleDateString("it-IT", { day: "numeric", month: "short" }) : "Da pianificare";
-    article.innerHTML = `<div class="card-top"><span class="client-logo purple">${escapeText(initials)}</span><small>Creata ora</small></div><h3>${escapeText(item.client)}</h3><p>${escapeText(item.request || item.service || "Richiesta da definire")}</p><div class="estimate"><small>Budget percepito</small><strong>${escapeText(item.budget || "Da stimare")}</strong></div><div class="next-action"><span>→</span><div><small>${escapeText(followup)}</small><strong>Qualificare l’opportunità</strong></div></div><footer><span class="mini-avatar lilac">${escapeText(roles[currentRole].initials)}</span><span>2/8 dati</span></footer>`;
-    target.prepend(article);
-  });
-  const total = $$(".opportunity-card").length;
-  const badge = $('[data-view="opportunities"] b');
-  if (badge) badge.textContent = total;
-  wireConnectedSurfaces();
-}
-
-function closeEntityPanel() {
-  $("#entityPanel").classList.remove("is-open");
-  $("#entityPanel").setAttribute("aria-hidden", "true");
-}
-
-function openEntityPanel(eyebrow, title, body) {
-  $("#entityEyebrow").textContent = eyebrow;
-  $("#entityTitle").textContent = title;
-  $("#entityPanelBody").innerHTML = body;
-  $("#entityPanel").classList.add("is-open");
-  $("#entityPanel").setAttribute("aria-hidden", "false");
-}
-
-function linkedProjectButton(key) {
-  const project = projects[key];
-  return `<button class="linked-item" data-open-project="${key}"><span><strong>${escapeText(project.title)}</strong><small>${escapeText(project.client)} · ${escapeText(project.state)}</small></span><em>→</em></button>`;
-}
-
-function linkedOpportunityButton(key) {
-  const item = {...opportunityData[key], ...(entityEdits[`opp-${key}`] || {})};
-  return `<button class="linked-item" data-open-opportunity="${key}"><span><strong>${escapeText(item.client)}</strong><small>${escapeText(item.service)} · ${escapeText(item.stage)}</small></span><em>→</em></button>`;
-}
-
-function bindEntityLinks() {
-  $$('[data-open-project]', $("#entityPanel")).forEach(button => button.addEventListener("click", () => openProjectDirect(button.dataset.openProject)));
-  $$('[data-open-opportunity]', $("#entityPanel")).forEach(button => button.addEventListener("click", () => openOpportunity(button.dataset.openOpportunity)));
-  $$('[data-open-member]', $("#entityPanel")).forEach(button => button.addEventListener("click", () => openMember(button.dataset.openMember)));
-}
-
-function openOpportunity(key) {
-  const original = opportunityData[key];
-  if (!original) return;
-  const item = {...original, ...(entityEdits[`opp-${key}`] || {})};
-  openEntityPanel("Opportunità commerciale", item.client, `<div class="entity-summary"><div><span>Fase</span><strong>${escapeText(item.stage)}</strong></div><div><span>Stima</span><strong>${escapeText(item.estimate)}</strong></div><div><span>Referente</span><strong>${escapeText(item.owner)}</strong></div></div><section class="entity-section"><h3>Dati e prossima azione</h3><form class="entity-form" id="opportunityDetailForm"><label>Fase<select name="stage">${["Da qualificare","In proposta","In attesa cliente","Confermata","Persa"].map(value=>`<option${value===item.stage?" selected":""}>${value}</option>`).join("")}</select></label><label>Referente<select name="owner">${["Andrea","Simone","Martina","Luca","Da assegnare"].map(value=>`<option${value===item.owner?" selected":""}>${value}</option>`).join("")}</select></label><label>Stima<input name="estimate" value="${escapeText(item.estimate)}"></label><label>Data azione<input name="date" value="${escapeText(item.date)}"></label><label class="full-field">Prossima azione<input name="next" value="${escapeText(item.next)}"></label><label class="full-field">Note<textarea name="notes">${escapeText(item.notes)}</textarea></label><button class="primary-button" type="submit">Salva opportunità</button></form></section><section class="entity-section"><h3>Cliente</h3><div class="linked-list"><button class="linked-item" data-open-client="${item.clientKey}"><span><strong>${escapeText(item.client)}</strong><small>${escapeText(item.contact)} · apri storico cliente</small></span><em>→</em></button></div></section>${key==="lumea"?`<section class="entity-section"><h3>Progetto collegato</h3><div class="linked-list">${linkedProjectButton("lumea")}</div></section>`:""}`);
-  $("#opportunityDetailForm").addEventListener("submit", event => { event.preventDefault(); entityEdits[`opp-${key}`] = Object.fromEntries(new FormData(event.currentTarget)); persist(); renderPersonalFeed(); toast("Opportunità aggiornata"); openOpportunity(key); });
-  $('[data-open-client]', $("#entityPanel")).addEventListener("click", event => openClient(event.currentTarget.dataset.openClient));
-  bindEntityLinks();
-}
-
-function openClient(key) {
-  const client = clientData[key];
-  if (!client) return;
-  Object.assign(client, entityEdits[`client-${key}`] || {});
-  openEntityPanel("Cliente", client.name, `<div class="entity-summary"><div><span>Valore storico</span><strong>${client.value}</strong></div><div><span>Lavori</span><strong>${client.jobs}</strong></div><div><span>Referente</span><strong>${client.owner.split(" ")[0]}</strong></div></div><section class="entity-section"><h3>Anagrafica e accordi</h3><form class="entity-form" id="clientDetailForm"><label>Contatto<input name="contact" value="${escapeText(client.contact)}"></label><label>Email<input name="email" value="${escapeText(client.email)}"></label><label class="full-field">Accordo permanente<textarea name="agreement">${escapeText(client.agreement)}</textarea></label><button type="submit" class="primary-button">Salva cliente</button></form></section><section class="entity-section"><h3>Progetti</h3><div class="linked-list">${client.projects.length?client.projects.map(linkedProjectButton).join(""):`<div class="activity-note">Nessun progetto attivo.</div>`}</div></section><section class="entity-section"><h3>Opportunità</h3><div class="linked-list">${client.opportunities.length?client.opportunities.map(linkedOpportunityButton).join(""):`<div class="activity-note">Nessuna opportunità aperta.</div>`}</div></section>`);
-  $("#clientDetailForm").addEventListener("submit", event => { event.preventDefault(); Object.assign(clientData[key],Object.fromEntries(new FormData(event.currentTarget))); entityEdits[`client-${key}`]={contact:clientData[key].contact,email:clientData[key].email,agreement:clientData[key].agreement}; persist(); toast("Dati cliente salvati"); });
-  bindEntityLinks();
-}
-
-function openMember(key) {
-  const member = memberData[key];
-  if (!member) return;
-  const memberTasks = Object.entries(projectTasks).flatMap(([projectKey,tasks]) => tasks.filter(task => task.assignee === member.name.split(" ")[0]).map(task => ({...task,projectKey})));
-  openEntityPanel("Membro del team", member.name, `<div class="entity-summary"><div><span>Disponibilità</span><strong>${member.availability}</strong></div><div><span>Carico</span><strong>${member.load}</strong></div><div><span>Capacità</span><strong>${member.capacity}</strong></div></div><section class="entity-section"><h3>Competenze</h3><div class="activity-note">${escapeText(member.skills)}</div></section><section class="entity-section"><h3>Lavorazioni assegnate</h3><div class="linked-list">${memberTasks.map(task=>`<button class="linked-item" data-direct-project="${task.projectKey}" data-direct-task="${task.id}"><span><strong>${escapeText(task.title)}</strong><small>${escapeText(projects[task.projectKey].client)} · ${escapeText(task.status)}</small></span><em>→</em></button>`).join("") || `<div class="activity-note">Nessuna lavorazione aperta.</div>`}</div></section><section class="entity-section"><h3>Progetti coinvolti</h3><div class="linked-list">${member.projects.map(linkedProjectButton).join("")}</div></section>`);
-  $$('[data-direct-project]', $("#entityPanel")).forEach(button => button.addEventListener("click", () => openProjectTaskDirect(button.dataset.directProject, button.dataset.directTask)));
-  bindEntityLinks();
-}
-
-function openProjectDirect(projectKey) {
-  closeEntityPanel();
-  showView("projects");
-  activeProjectKey = projectKey;
-  openProjectWorkspace();
-}
-
-function openProjectTaskDirect(projectKey, taskId) {
-  closeEntityPanel();
-  showView("projects");
-  activeProjectKey = projectKey;
-  openProjectWorkspace();
-  if ((projectTasks[projectKey] || []).some(task => task.id === taskId)) activeProjectTaskId = taskId;
-  renderProjectWorkspace(); renderTaskEditor();
-}
-
-function openProject(projectKey) {
-  const project = projects[projectKey];
-  if (!project) return;
-  const drawer = $("#projectDrawer");
-  $("#projectDrawer header small").textContent = project.client;
-  $("#projectDrawer header h2").textContent = project.title;
-  const state = $("#projectDrawer .drawer-status .state-tag");
-  state.textContent = project.state;
-  state.className = `state-tag ${project.stateClass}`;
-  $("#projectDrawer .drawer-status span:last-child").textContent = `${project.progress}% completato`;
-  $("#projectDrawer .delivery-card small").textContent = project.deliveryLabel;
-  $("#projectDrawer .delivery-card strong").textContent = project.delivery;
-  $("#projectDrawer .delivery-card span").textContent = project.detail;
-  $("#projectDrawer .delivery-card > i").textContent = `${project.progress}%`;
-  const responsibilitySection = $$("#projectDrawer section")[1];
-  responsibilitySection.innerHTML = `<h3>Responsabilità</h3>${project.people.map(person => `<div class="responsibility"><span class="avatar ${person[4]}">${person[0]}</span><span><strong>${escapeText(person[1])}</strong><small>${escapeText(person[2])}</small></span><em>${escapeText(person[3])}</em></div>`).join("")}<div class="responsibility missing"><span class="avatar">!</span><span><strong>${escapeText(project.missing)}</strong><small>${escapeText(project.missingText)}</small></span><em>!</em></div>`;
-  drawer.classList.add("is-open");
-  drawer.setAttribute("aria-hidden", "false");
-  activeProjectKey = projectKey;
-}
-
-function getActiveProjectTask() {
-  return (projectTasks[activeProjectKey] || []).find(task => task.id === activeProjectTaskId);
-}
-
-function statusClass(status) {
-  if (status === "Completata") return "done";
-  if (status === "Bloccata" || status === "Da assegnare") return "blocked";
-  if (status === "In revisione") return "review";
-  return "production";
-}
-
-function renderProjectWorkspace() {
-  const project = projects[activeProjectKey];
-  const tasks = projectTasks[activeProjectKey] || [];
-  const done = tasks.filter(task => task.status === "Completata").length;
-  const progress = tasks.length ? Math.round(done / tasks.length * 100) : 0;
-  $("#workspaceClient").textContent = project.client;
-  $("#workspaceTitle").textContent = project.title;
-  $("#workspaceState").textContent = project.state;
-  $("#workspaceState").className = `state-tag ${project.stateClass}`;
-  $("#workspaceProgress").textContent = `${progress}% task completate`;
-  $("#workspaceTaskCount").textContent = `${tasks.length} task`;
-  const phases = [...new Set(tasks.map(task => task.phase))];
-  $("#phaseList").innerHTML = phases.map(phase => {
-    const items = tasks.filter(task => task.phase === phase);
-    const complete = items.filter(task => task.status === "Completata").length;
-    return `<section class="phase"><header><strong>${escapeText(phase)}</strong><span>${complete}/${items.length}</span></header>${items.map(task => `<button class="phase-task${task.id === activeProjectTaskId ? " is-active" : ""}" data-project-task="${task.id}"><span class="task-dot ${task.status === "Completata" ? "done" : ""}"></span><span><strong>${escapeText(task.title)}</strong><small>${escapeText(task.assignee)} · ${escapeText(task.due || "Senza scadenza")}</small></span><em>${escapeText(task.status)}</em></button>`).join("")}</section>`;
-  }).join("");
-  $$('[data-project-task]').forEach(button => button.addEventListener("click", () => {
-    activeProjectTaskId = button.dataset.projectTask;
-    renderProjectWorkspace();
-    renderTaskEditor();
-  }));
-  renderComments();
-}
-
-function renderTaskEditor() {
-  const task = getActiveProjectTask();
-  if (!task) {
-    $("#taskEditor").innerHTML = `<div class="task-empty"><span>✓</span><h3>Seleziona una lavorazione</h3><p>Qui puoi gestire stato, responsabilità, scadenza, descrizione e checklist.</p></div>`;
+function renderToday(){
+  const root=$("#view-today"), person=activeMember(), open=state.projects.filter(p=>p.status!=="done"), mine=myItems();
+  if(!state.team.length&&!state.clients.length&&!state.services.length){
+    root.innerHTML=heading("Primo accesso","Costruiamo ReFrame.","La struttura è pronta e completamente vuota. Inserisci i dati reali nell’ordine più naturale per iniziare.",null)+`<div class="setup-grid">
+      <button class="setup-card" data-action="new-member"><b>1</b><strong>Crea il team</strong><small>Inserisci le persone, i ruoli e le competenze.</small></button>
+      <button class="setup-card" data-action="new-service"><b>2</b><strong>Definisci i servizi</strong><small>Aggiungi il catalogo e il prezzo di ogni persona.</small></button>
+      <button class="setup-card" data-action="new-client"><b>3</b><strong>Registra un cliente</strong><small>Puoi partire anche da poche informazioni.</small></button>
+      <button class="setup-card" data-action="new-opportunity"><b>4</b><strong>Apri un’opportunità</strong><small>Trasformala poi in un progetto operativo.</small></button>
+    </div>`;
     return;
   }
-  const statusOptions = ["Non iniziata","In attesa","Da assegnare","In lavorazione","In revisione","Bloccata","Completata"];
-  const assignees = ["Andrea","Simone","Martina","Luca","Da assegnare"];
-  $("#taskEditor").innerHTML = `<div class="task-headline"><button class="complete-task ${task.status === "Completata" ? "is-done" : ""}" id="completeProjectTask" aria-label="Completa task">${task.status === "Completata" ? "✓" : ""}</button><div><input id="projectTaskTitle" value="${escapeText(task.title)}" aria-label="Titolo task"><div class="task-code">${escapeText(task.id.toUpperCase())} · ${escapeText(task.phase)}</div></div></div><div class="task-fields"><label>Stato<select id="projectTaskStatus">${statusOptions.map(item => `<option${item === task.status ? " selected" : ""}>${item}</option>`).join("")}</select></label><label>Responsabile<select id="projectTaskAssignee">${assignees.map(item => `<option${item === task.assignee ? " selected" : ""}>${item}</option>`).join("")}</select></label><label>Scadenza<input id="projectTaskDue" type="date" value="${escapeText(task.due)}"></label></div><div class="task-description"><label>Descrizione<textarea id="projectTaskDescription">${escapeText(task.description)}</textarea></label></div><section class="task-editor-section"><div class="checklist-head"><span>Checklist</span><button id="addChecklistItem">＋ Aggiungi step</button></div><div class="checklist">${task.checklist.map((item,index) => `<label class="check-item ${item[1] ? "done" : ""}"><input type="checkbox" data-check-index="${index}"${item[1] ? " checked" : ""}><span>${escapeText(item[0])}</span></label>`).join("")}</div></section><div class="task-save-line"><small>Le modifiche vengono salvate in questa demo.</small><span><button class="secondary-button" id="openConversation">Commenti (${task.comments.length})</button> <button class="primary-button" id="saveProjectTask">Salva modifiche</button></span></div>`;
-  $("#saveProjectTask").addEventListener("click", saveActiveTask);
-  $("#openConversation").addEventListener("click", () => $(".task-conversation").classList.toggle("has-content"));
-  $("#completeProjectTask").addEventListener("click", () => { task.status = task.status === "Completata" ? "In lavorazione" : "Completata"; persist(); renderProjectWorkspace(); renderTaskEditor(); renderPersonalFeed(); toast(task.status === "Completata" ? "Task completata" : "Task riaperta"); });
-  $$('[data-check-index]').forEach(input => input.addEventListener("change", () => { task.checklist[Number(input.dataset.checkIndex)][1] = input.checked; persist(); renderTaskEditor(); }));
-  $("#addChecklistItem").addEventListener("click", () => { const title = prompt("Nome del nuovo step"); if (title?.trim()) { task.checklist.push([title.trim(), false]); persist(); renderTaskEditor(); } });
+  const greeting=new Date().getHours()>=4&&new Date().getHours()<18?"Buongiorno":"Buonasera";
+  root.innerHTML=heading(new Intl.DateTimeFormat("it-IT",{weekday:"long",day:"numeric",month:"long"}).format(new Date()),`${greeting}${person?", "+esc(person.name.split(" ")[0]):""}.`,person?"Qui trovi ciò che richiede la tua attenzione, con accesso diretto al contesto.":"Seleziona un profilo per attivare la vista personale.","new-opportunity","＋ Nuova opportunità")+`
+  <div class="metrics"><article class="metric"><span>Progetti aperti</span><strong>${open.length}</strong><small>Visibili a tutto il team</small></article><article class="metric"><span>Le mie attività</span><strong>${mine.length}</strong><small>Task e follow-up aperti</small></article><article class="metric"><span>Opportunità</span><strong>${state.opportunities.filter(o=>o.stage!=="Confermata").length}</strong><small>Pipeline attiva</small></article><article class="metric"><span>Clienti</span><strong>${state.clients.length}</strong><small>Anagrafiche registrate</small></article></div>
+  <div class="grid-2"><article class="panel"><div class="panel-head"><div><h2>Il mio lavoro</h2><p>Solo ciò in cui sei personalmente coinvolto</p></div><button class="button secondary" data-view="mywork">Apri il feed</button></div>${feedHtml(mine.slice(0,6),true)}</article>
+  <article class="panel"><div class="panel-head"><div><h2>Agenda e scadenze</h2><p>Le prossime attività</p></div><button class="button secondary" data-view="calendar">Calendario</button></div>${feedHtml(allTasks().filter(t=>t.status!=="Completata").sort((a,b)=>(a.due||"9999").localeCompare(b.due||"9999")).slice(0,6),false)}</article></div>`;
+}
+function feedHtml(items,personal){
+  if(!items.length)return empty(personal?"Nessuna attività personale":"Nessuna scadenza",personal?"Le task assegnate a te compariranno qui.":"Le task dei progetti compariranno qui.",null);
+  return `<div class="feed">`+items.map(x=>`<article class="feed-item" data-open-${x.type==="opportunity"?"opportunity":"task"}="${x.type==="opportunity"?x.id:x.projectId+":"+x.id}"><span class="check"></span><div><h3>${esc(x.title)}</h3><p>${x.type==="opportunity"?"Opportunità · "+esc(client(x.clientId)?.name||"Cliente"):esc(x.projectTitle||project(x.projectId)?.title||"Progetto")+" · "+esc(x.status)}</p></div><time>${dateLabel(x.due)}</time></article>`).join("")+`</div>`;
+}
+function renderMyWork(){
+  const root=$("#view-mywork"),person=activeMember(),items=myItems();
+  const filtered=items.filter(x=>myFilter==="all"||(myFilter==="late"&&x.due&&x.due<todayIso())||(myFilter==="today"&&x.due===todayIso())||x.type===myFilter);
+  root.innerHTML=heading("Spazio personale","Il mio lavoro",person?`Tutto ciò che riguarda ${esc(person.name)}, in un unico feed ordinato per scadenza.`:"Seleziona una persona per vedere la sua vista personale.",null)+`
+  <div class="toolbar"><div class="scope"><button data-my-filter="all" class="${myFilter==="all"?"active":""}">Tutto</button><button data-my-filter="late" class="${myFilter==="late"?"active":""}">In ritardo</button><button data-my-filter="today" class="${myFilter==="today"?"active":""}">Oggi</button><button data-my-filter="task" class="${myFilter==="task"?"active":""}">Task</button><button data-my-filter="opportunity" class="${myFilter==="opportunity"?"active":""}">Commerciale</button></div></div>
+  ${person?feedHtml(filtered,true):empty("Profilo personale non selezionato","Scegli il tuo nome dal selettore in alto per attivare questa vista.","new-member","Gestisci il team")}`;
+}
+function estimateFor(serviceId){
+  const s=service(serviceId),values=(s?.prices||[]).map(p=>Number(p.price)).filter(Boolean);
+  if(!values.length)return"Da stimare";
+  return values.length===1?money(values[0]):money(Math.min(...values))+" – "+money(Math.max(...values));
+}
+function renderOpportunities(){
+  const root=$("#view-opportunities");
+  const filtered=state.opportunities.filter(o=>opportunityFilter==="all"||(opportunityFilter==="mine"&&o.ownerId===state.activeMemberId)||(opportunityFilter==="late"&&o.followup&&o.followup<todayIso()));
+  root.innerHTML=heading("Commerciale","Opportunità","Ogni possibilità ha un referente, una stima e una prossima azione.","new-opportunity","＋ Nuova opportunità")+`
+  <div class="metrics"><article class="metric"><span>Pipeline</span><strong>${money(state.opportunities.reduce((s,o)=>s+(Number(o.budget)||0),0))}</strong><small>Valore indicativo</small></article><article class="metric"><span>Aperte</span><strong>${state.opportunities.filter(o=>o.stage!=="Confermata").length}</strong><small>Da seguire</small></article><article class="metric"><span>Da sollecitare</span><strong>${state.opportunities.filter(o=>o.followup&&o.followup<todayIso()&&o.stage!=="Confermata").length}</strong><small>Follow-up scaduti</small></article><article class="metric"><span>Confermate</span><strong>${state.opportunities.filter(o=>o.stage==="Confermata").length}</strong><small>Pronte per il progetto</small></article></div>
+  <div class="toolbar"><div class="scope"><button data-opp-filter="all" class="${opportunityFilter==="all"?"active":""}">Tutte</button><button data-opp-filter="mine" class="${opportunityFilter==="mine"?"active":""}">Solo mie</button><button data-opp-filter="late" class="${opportunityFilter==="late"?"active":""}">Da sollecitare</button></div></div>
+  <div class="kanban">${stages.map(stage=>{const list=filtered.filter(o=>o.stage===stage);return `<section class="column"><header><span>${stage}</span><b>${list.length}</b></header>${list.map(o=>`<article class="opportunity" data-open-opportunity="${o.id}"><small>${esc(member(o.ownerId)?.name||"Da assegnare")}</small><h3>${esc(client(o.clientId)?.name||o.clientName||"Nuovo cliente")}</h3><p>${esc(service(o.serviceId)?.name||o.request||"Servizio da definire")}</p><strong>${o.budget?money(o.budget):estimateFor(o.serviceId)}</strong><footer><span>${esc(o.nextAction||"Nessuna azione")}</span><span>${dateLabel(o.followup)}</span></footer></article>`).join("")||`<div class="empty"><span>Nessuna opportunità</span></div>`}</section>`}).join("")}</div>`;
+}
+function projectRelevant(p){return(p.memberIds||[]).includes(state.activeMemberId)||(p.tasks||[]).some(t=>t.assigneeId===state.activeMemberId)}
+function renderProjects(){
+  const root=$("#view-projects"),counts={open:0,review:0,blocked:0,done:0};state.projects.forEach(p=>counts[p.status||"open"]++);
+  const filtered=state.projects.filter(p=>(p.status||"open")===projectStatus&&(projectScope==="all"||projectRelevant(p)));
+  root.innerHTML=heading("Produzione","Progetti","Tutti vedono i progetti aperti. Il filtro personale riduce la vista a ciò che ti riguarda.","new-project","＋ Nuovo progetto")+`
+  <div class="toolbar"><div class="scope"><button data-project-scope="all" class="${projectScope==="all"?"active":""}">Tutti i progetti</button><button data-project-scope="mine" class="${projectScope==="mine"?"active":""}">Solo i miei</button></div><div class="filters">${Object.entries(statusMap).map(([k,v])=>`<button data-project-status="${k}" class="${projectStatus===k?"active":""}">${v} · ${counts[k]}</button>`).join("")}</div></div>
+  <div class="list">${filtered.map(p=>{const tasks=p.tasks||[],done=tasks.filter(t=>t.status==="Completata").length;return `<article class="record" data-open-project="${p.id}"><div class="identity"><span class="logo">${initials(client(p.clientId)?.name||p.title)}</span><div><small>${esc(client(p.clientId)?.name||"Senza cliente")}</small><strong>${esc(p.title)}</strong></div></div><div><span class="pill ${p.status==="blocked"?"red":p.status==="done"?"green":""}">${statusMap[p.status||"open"]}</span></div><div><small>Avanzamento</small><strong>${done}/${tasks.length} task</strong></div><button class="icon">→</button></article>`}).join("")||empty("Nessun progetto in questa vista",projectScope==="mine"?"Non risultano progetti che coinvolgono il profilo selezionato.":"Crea il primo progetto o cambia filtro.","new-project","Nuovo progetto")}</div>`;
+}
+function renderCalendar(){
+  const root=$("#view-calendar"),events=allTasks().filter(t=>t.due);
+  const start=new Date();start.setDate(start.getDate()-((start.getDay()+6)%7));
+  const days=[...Array(28)].map((_,i)=>{const d=new Date(start);d.setDate(d.getDate()+i);return d});
+  root.innerHTML=heading("Pianificazione","Calendario","Ogni scadenza apre direttamente la task nel suo progetto.",null)+`<div class="calendar">${days.map(d=>{const iso=d.toISOString().slice(0,10),list=events.filter(e=>e.due===iso);return `<div class="day"><small>${new Intl.DateTimeFormat("it-IT",{weekday:"short",day:"numeric"}).format(d)}</small>${list.map(e=>`<button class="event" data-open-task="${e.projectId}:${e.id}">${esc(e.title)}</button>`).join("")}</div>`}).join("")}</div>`;
+}
+function renderClients(){
+  const root=$("#view-clients");
+  root.innerHTML=heading("Anagrafiche","Clienti","Contatti, dati fiscali, progetti e opportunità nello stesso posto.","new-client","＋ Nuovo cliente")+`<div class="list">${state.clients.map(c=>`<article class="record" data-open-client="${c.id}"><div class="identity"><span class="logo">${initials(c.name)}</span><div><strong>${esc(c.name)}</strong><small>${esc(c.sector||"Settore non indicato")}</small></div></div><div><small>Referente</small><strong>${esc(c.contact||"—")}</strong></div><div><small>Attività</small><strong>${state.projects.filter(p=>p.clientId===c.id).length} progetti · ${state.opportunities.filter(o=>o.clientId===c.id).length} opportunità</strong></div><button class="icon">→</button></article>`).join("")||empty("Nessun cliente","Aggiungi anche un’anagrafica minima; potrai completarla in seguito.","new-client","Nuovo cliente")}</div>`;
+}
+function renderTeam(){
+  const root=$("#view-team");
+  root.innerHTML=heading("Persone","Team","Ogni persona ha ruolo, competenze e un listino individuale.","new-member","＋ Nuova persona")+`<div class="cards">${state.team.map(p=>`<article class="person" data-open-member="${p.id}"><div class="person-head">${avatar(p)}<div><h3>${esc(p.name)}</h3><small>${esc(p.role||"Ruolo da definire")}</small></div></div><p>${esc(p.skills||"Competenze da inserire")}</p><span class="pill ${p.id===state.activeMemberId?"green":""}">${p.id===state.activeMemberId?"Profilo attivo":p.availability||"Disponibilità non indicata"}</span></article>`).join("")||empty("Nessuna persona","Inserisci i membri dell’hub per assegnare lavori e definire i listini.","new-member","Crea la prima persona")}</div>`;
+}
+function renderServices(){
+  const root=$("#view-services");
+  root.innerHTML=heading("Catalogo","Servizi e listini","Uno stesso servizio può avere prezzi diversi per ogni professionista.","new-service","＋ Nuovo servizio")+`<div class="cards">${state.services.map(s=>`<article class="service" data-open-service="${s.id}"><small>${esc(s.category||"Senza categoria")}</small><h3>${esc(s.name)}</h3><p>${esc(s.description||"Nessuna descrizione")}</p><div class="prices">${(s.prices||[]).filter(p=>Number(p.price)).map(p=>`<div class="price-row"><span>${esc(member(p.memberId)?.name||"Persona rimossa")}</span><strong>${money(p.price)} ${s.unit?"/ "+esc(s.unit):""}</strong></div>`).join("")||"<small>Nessun prezzo inserito</small>"}</div></article>`).join("")||empty("Nessun servizio","Crea il catalogo e assegna un prezzo diverso a ogni persona.","new-service","Nuovo servizio")}</div>`;
+}
+function renderFinance(){
+  const root=$("#view-finance"),projects=state.projects.filter(p=>p.status==="done"||p.budget);
+  root.innerHTML=heading("Economia","Amministrazione","Valori economici derivati dai progetti reali inseriti.",null)+`<div class="metrics"><article class="metric"><span>Valore progetti</span><strong>${money(state.projects.reduce((s,p)=>s+(Number(p.budget)||0),0))}</strong><small>Totale concordato</small></article><article class="metric"><span>Conclusi</span><strong>${state.projects.filter(p=>p.status==="done").length}</strong><small>Pronti per la fatturazione</small></article><article class="metric"><span>In corso</span><strong>${state.projects.filter(p=>p.status!=="done").length}</strong><small>Progetti operativi</small></article><article class="metric"><span>Collaboratori</span><strong>${state.team.length}</strong><small>Persone registrate</small></article></div>${projects.length?`<div class="list">${projects.map(p=>`<article class="record" data-open-project="${p.id}"><div class="identity"><span class="logo">€</span><div><strong>${esc(p.title)}</strong><small>${esc(client(p.clientId)?.name||"Senza cliente")}</small></div></div><div><span class="pill">${statusMap[p.status]}</span></div><div><strong>${money(p.budget)}</strong></div><button class="icon">→</button></article>`).join("")}</div>`:empty("Nessun dato economico","I valori compariranno quando inserirai budget nei progetti.",null)}`;
+}
+function renderInsights(){
+  const root=$("#view-insights"),done=state.projects.filter(p=>p.status==="done"),serviceCounts=state.services.map(s=>({name:s.name,count:state.opportunities.filter(o=>o.serviceId===s.id).length})).sort((a,b)=>b.count-a.count);
+  root.innerHTML=heading("Analisi","Insight","Una lettura semplice dei dati reali accumulati nel tempo.",null)+`<div class="metrics"><article class="metric"><span>Tasso di conferma</span><strong>${state.opportunities.length?Math.round(state.opportunities.filter(o=>o.stage==="Confermata").length/state.opportunities.length*100):0}%</strong><small>Opportunità confermate</small></article><article class="metric"><span>Valore medio progetto</span><strong>${money(state.projects.length?state.projects.reduce((s,p)=>s+(Number(p.budget)||0),0)/state.projects.length:0)}</strong><small>Su ${state.projects.length} progetti</small></article><article class="metric"><span>Task completate</span><strong>${allTasks().filter(t=>t.status==="Completata").length}</strong><small>Su ${allTasks().length} totali</small></article><article class="metric"><span>Lavori conclusi</span><strong>${done.length}</strong><small>Storico operativo</small></article></div><article class="panel"><div class="panel-head"><div><h2>Servizi più richiesti</h2><p>In base alle opportunità registrate</p></div></div>${serviceCounts.some(x=>x.count)?`<div class="list">${serviceCounts.filter(x=>x.count).map(x=>`<div class="price-row"><span>${esc(x.name)}</span><strong>${x.count}</strong></div>`).join("")}</div>`:empty("Dati non ancora sufficienti","Gli insight si costruiranno man mano che userete il gestionale.",null)}</article>`;
 }
 
-function saveActiveTask() {
-  const task = getActiveProjectTask();
-  task.title = $("#projectTaskTitle").value.trim() || task.title;
-  task.status = $("#projectTaskStatus").value;
-  task.assignee = $("#projectTaskAssignee").value;
-  task.due = $("#projectTaskDue").value;
-  task.description = $("#projectTaskDescription").value.trim();
-  persist();
-  renderProjectWorkspace();
-  renderTaskEditor();
-  renderPersonalFeed();
-  toast("Lavorazione aggiornata");
+function openSheet(eyebrow,title,html){
+  $("#sheetEyebrow").textContent=eyebrow;$("#sheetTitle").textContent=title;$("#sheetBody").innerHTML=html;
+  $("#backdrop").hidden=false;$("#sheet").classList.add("open");$("#sheet").setAttribute("aria-hidden","false");
+}
+function closeSheet(){$("#sheet").classList.remove("open");$("#sheet").setAttribute("aria-hidden","true");setTimeout(()=>$("#backdrop").hidden=true,220)}
+function openModal(title,html){$("#modalTitle").textContent=title;$("#modalBody").innerHTML=html;$("#modalWrap").hidden=false}
+function closeModal(){$("#modalWrap").hidden=true}
+function memberForm(item={}){
+  openSheet("Team",item.id?"Modifica persona":"Nuova persona",`<form class="form" data-form="member" data-id="${item.id||""}"><div class="form-grid"><label>Nome e cognome<input required name="name" value="${esc(item.name||"")}"></label><label>Ruolo<input name="role" value="${esc(item.role||"")}" placeholder="es. Videomaker, commerciale"></label></div><label>Email<input type="email" name="email" value="${esc(item.email||"")}"></label><label>Competenze<textarea name="skills" placeholder="Foto, video, montaggio…">${esc(item.skills||"")}</textarea></label><label>Disponibilità<select name="availability"><option>Disponibile</option><option>Limitata</option><option>Non disponibile</option></select></label>${formActions(item.id?"delete-member:"+item.id:"")}</form>`);
+  if(item.availability)$('[name="availability"]').value=item.availability;
+}
+function clientForm(item={}){
+  openSheet("Clienti",item.id?"Modifica cliente":"Nuovo cliente",`<form class="form" data-form="client" data-id="${item.id||""}"><div class="form-grid"><label>Ragione sociale / nome<input required name="name" value="${esc(item.name||"")}"></label><label>Settore<input name="sector" value="${esc(item.sector||"")}"></label><label>Referente<input name="contact" value="${esc(item.contact||"")}"></label><label>Email<input type="email" name="email" value="${esc(item.email||"")}"></label><label>Partita IVA<input name="vat" value="${esc(item.vat||"")}"></label><label>Codice fiscale<input name="taxCode" value="${esc(item.taxCode||"")}"></label></div><label>Indirizzo<input name="address" value="${esc(item.address||"")}"></label><label>Note<textarea name="notes">${esc(item.notes||"")}</textarea></label>${formActions(item.id?"delete-client:"+item.id:"")}</form>`);
+}
+function serviceForm(item={}){
+  openSheet("Catalogo",item.id?"Modifica servizio":"Nuovo servizio",`<form class="form" data-form="service" data-id="${item.id||""}"><div class="form-grid"><label>Nome servizio<input required name="name" value="${esc(item.name||"")}"></label><label>Categoria<input name="category" value="${esc(item.category||"")}"></label><label>Unità di prezzo<input name="unit" value="${esc(item.unit||"")}" placeholder="servizio, giornata, ora…"></label></div><label>Descrizione<textarea name="description">${esc(item.description||"")}</textarea></label><h3>Listino per persona</h3>${state.team.length?`<div class="form-grid">${state.team.map(p=>`<label>${esc(p.name)}<input type="number" min="0" step="10" name="price-${p.id}" value="${(item.prices||[]).find(x=>x.memberId===p.id)?.price||""}" placeholder="€"></label>`).join("")}</div>`:`<div class="empty"><span>Inserisci prima le persone del team per creare i listini individuali.</span></div>`}${formActions(item.id?"delete-service:"+item.id:"")}</form>`);
+}
+function opportunityForm(item={}){
+  const isEdit=!!item.id;
+  openModal(isEdit?"Modifica opportunità":"Nuova opportunità",`<form class="form" data-form="opportunity" data-id="${item.id||""}"><div class="form-grid"><label>Cliente<select name="clientId">${options(state.clients,item.clientId,"Nuovo cliente rapido")}</select></label><label>Nuovo cliente<input name="clientName" value="${esc(item.clientName||"")}" placeholder="Usa se non è già registrato"></label><label>Servizio<select name="serviceId">${options(state.services,item.serviceId,"Da definire")}</select></label><label>Referente interno<select name="ownerId">${options(state.team,item.ownerId,"Da assegnare")}</select></label><label>Fase<select name="stage">${stages.map(s=>`<option ${s===(item.stage||stages[0])?"selected":""}>${s}</option>`).join("")}</select></label><label>Budget indicativo (€)<input type="number" min="0" name="budget" value="${item.budget||""}"></label><label>Follow-up<input type="date" name="followup" value="${item.followup||""}"></label><label>Prossima azione<input name="nextAction" value="${esc(item.nextAction||"")}"></label></div><label>Richiesta / note<textarea name="request">${esc(item.request||"")}</textarea></label><div class="form-actions">${isEdit?`<button type="button" class="button danger" data-action="delete-opportunity:${item.id}">Elimina</button>`:""}<button type="button" class="button secondary" data-action="close-modal">Annulla</button>${isEdit&&item.stage==="Confermata"?`<button type="button" class="button secondary" data-action="convert-opportunity:${item.id}">Crea progetto</button>`:""}<button class="button primary">Salva</button></div></form>`);
+}
+function projectForm(item={}){
+  openSheet("Progetti",item.id?"Modifica progetto":"Nuovo progetto",`<form class="form" data-form="project" data-id="${item.id||""}"><label>Titolo<input required name="title" value="${esc(item.title||"")}"></label><div class="form-grid"><label>Cliente<select name="clientId" required>${options(state.clients,item.clientId,"Seleziona cliente")}</select></label><label>Stato<select name="status">${Object.entries(statusMap).map(([k,v])=>`<option value="${k}" ${(item.status||"open")===k?"selected":""}>${v}</option>`).join("")}</select></label><label>Inizio<input type="date" name="start" value="${item.start||""}"></label><label>Consegna<input type="date" name="due" value="${item.due||""}"></label><label>Budget concordato (€)<input type="number" min="0" name="budget" value="${item.budget||""}"></label></div><label>Descrizione<textarea name="description">${esc(item.description||"")}</textarea></label><h3>Persone coinvolte</h3><div class="check-grid">${state.team.map(p=>`<label><input type="checkbox" name="memberIds" value="${p.id}" ${(item.memberIds||[]).includes(p.id)?"checked":""}>${esc(p.name)}</label>`).join("")||"<small>Nessuna persona registrata</small>"}</div>${formActions(item.id?"delete-project:"+item.id:"")}</form>`);
+}
+function openProject(id,taskId){
+  const p=project(id);if(!p)return;
+  const tasks=p.tasks||[], selected=tasks.find(t=>t.id===taskId)||tasks[0];
+  openSheet("Progetto",p.title,`<div class="toolbar"><div><span class="pill">${statusMap[p.status||"open"]}</span> <small>${esc(client(p.clientId)?.name||"Senza cliente")} · ${dateLabel(p.due)}</small></div><button class="button secondary" data-action="edit-project:${p.id}">Modifica progetto</button></div><div class="task-board"><div class="task-list"><button class="button primary" data-action="new-task:${p.id}">＋ Nuova task</button>${tasks.map(t=>`<button class="task-button ${selected?.id===t.id?"active":""}" data-open-task="${p.id}:${t.id}"><strong>${esc(t.title)}</strong><small>${esc(t.status)}</small></button>`).join("")||`<div class="empty"><span>Nessuna task</span></div>`}</div><div id="taskDetail">${selected?taskEditor(p,selected):empty("Progetto pronto","Aggiungi la prima lavorazione per iniziare.","new-task:"+p.id,"Nuova task")}</div></div>`);
+}
+function taskEditor(p,t){
+  return `<form class="form task-editor" data-form="task" data-project="${p.id}" data-id="${t.id}"><label>Titolo<input required name="title" value="${esc(t.title)}"></label><div class="form-grid"><label>Fase<input name="phase" value="${esc(t.phase||"")}"></label><label>Stato<select name="status">${taskStatuses.map(s=>`<option ${s===t.status?"selected":""}>${s}</option>`).join("")}</select></label><label>Assegnata a<select name="assigneeId">${options(state.team,t.assigneeId,"Da assegnare")}</select></label><label>Scadenza<input type="date" name="due" value="${t.due||""}"></label></div><label>Descrizione<textarea name="description">${esc(t.description||"")}</textarea></label><label>Checklist <small>(una voce per riga)</small><textarea name="checklist">${esc((t.checklist||[]).map(x=>x.text).join("\n"))}</textarea></label><div class="comments"><h3>Commenti</h3>${(t.comments||[]).map(c=>`<div class="comment"><strong>${esc(member(c.authorId)?.name||c.author||"Membro del team")}</strong><small> · ${esc(c.createdAt||"")}</small><p>${esc(c.text)}</p></div>`).join("")||"<small>Nessun commento</small>"}<label>Nuovo commento<textarea name="newComment" placeholder="Scrivi un aggiornamento…"></textarea></label></div><div class="form-actions"><button type="button" class="button danger" data-action="delete-task:${p.id}:${t.id}">Elimina task</button><button class="button primary">Salva task</button></div></form>`;
+}
+function taskForm(projectId){
+  openModal("Nuova task",`<form class="form" data-form="new-task" data-project="${projectId}"><label>Titolo<input required name="title"></label><div class="form-grid"><label>Fase<input name="phase" placeholder="es. Pre-produzione"></label><label>Assegnata a<select name="assigneeId">${options(state.team,null,"Da assegnare")}</select></label><label>Scadenza<input type="date" name="due"></label><label>Stato<select name="status">${taskStatuses.map(s=>`<option>${s}</option>`).join("")}</select></label></div><label>Descrizione<textarea name="description"></textarea></label><div class="form-actions"><button type="button" class="button secondary" data-action="close-modal">Annulla</button><button class="button primary">Crea task</button></div></form>`);
 }
 
-function renderComments() {
-  const task = getActiveProjectTask();
-  const comments = task?.comments || [];
-  $("#commentCount").textContent = comments.length;
-  $("#commentList").innerHTML = task ? (comments.length ? comments.map(comment => `<article class="comment"><span class="avatar ${comment.tone}">${escapeText(comment.initials)}</span><div class="comment-body"><div class="comment-meta"><strong>${escapeText(comment.author)}</strong><time>${escapeText(comment.time)}</time></div><p>${escapeText(comment.text)}</p>${(comment.files || []).map(file => `<div class="attachment-card"><i>▧</i><span><strong>${escapeText(file)}</strong><small>Allegato dimostrativo</small></span></div>`).join("")}</div></article>`).join("") : `<div class="task-empty"><p>Nessun commento. Inizia la conversazione su questa lavorazione.</p></div>`) : `<div class="task-empty"><p>Seleziona una lavorazione per vedere commenti e allegati.</p></div>`;
-}
-
-function openProjectWorkspace() {
-  $("#projectDrawer").classList.remove("is-open");
-  const tasks = projectTasks[activeProjectKey] || [];
-  activeProjectTaskId = tasks.find(task => task.status !== "Completata")?.id || tasks[0]?.id || null;
-  $("#projectWorkspace").classList.add("is-open");
-  $("#projectWorkspace").setAttribute("aria-hidden", "false");
-  document.body.style.overflow = "hidden";
-  showWorkspaceTab("tasks");
-}
-
-function closeProjectWorkspace() {
-  $("#projectWorkspace").classList.remove("is-open");
-  $("#projectWorkspace").setAttribute("aria-hidden", "true");
-  $(".task-conversation").classList.remove("has-content");
-  document.body.style.overflow = "";
-}
-
-function showNewTaskForm() {
-  $("#taskEditor").innerHTML = `<div class="new-task-card"><h3>Nuova task</h3><label>Titolo<input id="newTaskTitle" placeholder="Es. Esportare versione verticale"></label><label>Fase<select id="newTaskPhase"><option>Pre-produzione</option><option>Produzione</option><option>Post-produzione</option><option>Revisione</option><option>Consegna</option></select></label><label>Responsabile<select id="newTaskAssignee"><option>Andrea</option><option>Simone</option><option>Martina</option><option>Luca</option><option>Da assegnare</option></select></label><div class="new-task-actions"><button class="secondary-button" id="cancelNewTask">Annulla</button><button class="primary-button" id="createProjectTask">Crea task</button></div></div>`;
-  $("#cancelNewTask").addEventListener("click", renderTaskEditor);
-  $("#createProjectTask").addEventListener("click", () => {
-    const title = $("#newTaskTitle").value.trim();
-    if (!title) return toast("Inserisci un titolo");
-    const task = { id:`${activeProjectKey.slice(0,3)}-${Date.now().toString().slice(-4)}`, phase:$("#newTaskPhase").value, title, status:"Non iniziata", assignee:$("#newTaskAssignee").value, due:"", description:"", checklist:[], comments:[] };
-    projectTasks[activeProjectKey].push(task); activeProjectTaskId = task.id; persist(); renderProjectWorkspace(); renderTaskEditor(); renderPersonalFeed(); toast("Nuova task creata");
-  });
-}
-
-function showWorkspaceTab(tabName) {
-  $$('[data-workspace-tab]').forEach(button => button.classList.toggle("is-active", button.dataset.workspaceTab === tabName));
-  $("#addTaskButton").style.display = tabName === "tasks" ? "block" : "none";
-  if (tabName === "tasks") { renderProjectWorkspace(); renderTaskEditor(); return; }
-  const tasks = projectTasks[activeProjectKey] || [];
-  $("#phaseList").innerHTML = `<section class="phase"><header><strong>Riepilogo progetto</strong><span>${tasks.length}</span></header>${tasks.map(task=>`<button class="phase-task" data-summary-task="${task.id}"><span class="task-dot ${task.status==="Completata"?"done":""}"></span><span><strong>${escapeText(task.title)}</strong><small>${escapeText(task.phase)}</small></span></button>`).join("")}</section>`;
-  $$('[data-summary-task]').forEach(button => button.addEventListener("click", () => { activeProjectTaskId=button.dataset.summaryTask; showWorkspaceTab("tasks"); }));
-  if (tabName === "timeline") {
-    const ordered = [...tasks].sort((a,b)=>(a.due||"9999").localeCompare(b.due||"9999"));
-    $("#taskEditor").innerHTML = `<div class="workspace-overview"><h3>Timeline delle lavorazioni</h3><p class="subtitle">Sequenza delle scadenze e stato corrente.</p><div class="timeline-list">${ordered.map(task=>`<button class="timeline-item" data-overview-task="${task.id}"><strong>${escapeText(task.title)}</strong><small>${escapeText(task.due||"Senza scadenza")} · ${escapeText(task.assignee)} · ${escapeText(task.status)}</small></button>`).join("")}</div></div>`;
-  } else if (tabName === "files") {
-    const files = tasks.flatMap(task => (task.comments||[]).flatMap(comment => (comment.files||[]).map(file=>({file,task}))));
-    $("#taskEditor").innerHTML = `<div class="workspace-overview"><h3>File del progetto</h3><p class="subtitle">Allegati raccolti automaticamente dalle conversazioni.</p><div class="file-grid">${files.length?files.map(item=>`<button class="file-card" data-overview-task="${item.task.id}"><span>▧</span><strong>${escapeText(item.file)}</strong><small>${escapeText(item.task.title)}</small></button>`).join(""):`<p>Nessun file allegato.</p>`}</div></div>`;
-  } else {
-    const project = projects[activeProjectKey];
-    $("#taskEditor").innerHTML = `<div class="workspace-overview"><h3>Economia del progetto</h3><p class="subtitle">Compensi dichiarati e valore operativo dimostrativo.</p><div class="economy-grid">${project.people.map(person=>`<div class="economy-card"><span>${escapeText(person[1])} · ${escapeText(person[2])}</span><strong>${escapeText(person[3])}</strong></div>`).join("")}<div class="economy-card"><span>Avanzamento task</span><strong>${tasks.filter(task=>task.status==="Completata").length}/${tasks.length}</strong></div></div></div>`;
+function submitForm(form){
+  const data=Object.fromEntries(new FormData(form));
+  if(form.dataset.form==="member"){
+    const existing=member(form.dataset.id),obj={...(existing||{}),id:existing?.id||uid("mem"),name:data.name,initials:initials(data.name),role:data.role,email:data.email,skills:data.skills,availability:data.availability};
+    if(existing)Object.assign(existing,obj);else{state.team.push(obj);if(!state.activeMemberId)state.activeMemberId=obj.id}
+  }else if(form.dataset.form==="client"){
+    const existing=client(form.dataset.id),obj={...(existing||{}),id:existing?.id||uid("cli"),...data};
+    if(existing)Object.assign(existing,obj);else state.clients.push(obj);
+  }else if(form.dataset.form==="service"){
+    const existing=service(form.dataset.id),prices=state.team.map(p=>({memberId:p.id,price:Number(data["price-"+p.id])||0}));
+    const obj={...(existing||{}),id:existing?.id||uid("srv"),name:data.name,category:data.category,unit:data.unit,description:data.description,prices};
+    if(existing)Object.assign(existing,obj);else state.services.push(obj);
+  }else if(form.dataset.form==="opportunity"){
+    let clientId=data.clientId;
+    if(!clientId&&data.clientName){const c={id:uid("cli"),name:data.clientName,sector:"",contact:"",email:"",notes:"Creato da opportunità"};state.clients.push(c);clientId=c.id}
+    if(!clientId){toast("Seleziona o crea un cliente");return}
+    const existing=state.opportunities.find(x=>x.id===form.dataset.id),obj={...(existing||{}),id:existing?.id||uid("opp"),clientId,serviceId:data.serviceId,ownerId:data.ownerId,stage:data.stage,budget:Number(data.budget)||0,followup:data.followup,nextAction:data.nextAction,request:data.request,createdAt:existing?.createdAt||todayIso()};
+    if(existing)Object.assign(existing,obj);else state.opportunities.push(obj);closeModal();
+  }else if(form.dataset.form==="project"){
+    const existing=project(form.dataset.id),memberIds=[...form.querySelectorAll('[name="memberIds"]:checked')].map(x=>x.value),obj={...(existing||{}),id:existing?.id||uid("prj"),title:data.title,clientId:data.clientId,status:data.status,start:data.start,due:data.due,budget:Number(data.budget)||0,description:data.description,memberIds,tasks:existing?.tasks||[]};
+    if(existing)Object.assign(existing,obj);else state.projects.push(obj);
+  }else if(form.dataset.form==="new-task"){
+    const p=project(form.dataset.project);p.tasks=p.tasks||[];p.tasks.push({id:uid("tsk"),title:data.title,phase:data.phase,status:data.status,assigneeId:data.assigneeId,due:data.due,description:data.description,checklist:[],comments:[]});closeModal();save();renderAll();openProject(p.id);toast("Task creata");return;
+  }else if(form.dataset.form==="task"){
+    const p=project(form.dataset.project),t=p.tasks.find(x=>x.id===form.dataset.id);
+    Object.assign(t,{title:data.title,phase:data.phase,status:data.status,assigneeId:data.assigneeId,due:data.due,description:data.description,checklist:(data.checklist||"").split("\n").filter(Boolean).map(text=>({text,done:(t.checklist||[]).find(x=>x.text===text)?.done||false}))});
+    if(data.newComment)t.comments=[...(t.comments||[]),{authorId:state.activeMemberId,text:data.newComment,createdAt:new Intl.DateTimeFormat("it-IT",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}).format(new Date())}];
+    save();renderAll();openProject(p.id,t.id);toast("Task aggiornata");return;
   }
-  $("#commentList").innerHTML = `<div class="task-empty"><p>Seleziona una lavorazione per aprire la conversazione.</p></div>`;
-  $$('[data-overview-task]').forEach(button => button.addEventListener("click", () => { activeProjectTaskId=button.dataset.overviewTask; showWorkspaceTab("tasks"); }));
+  save();closeSheet();renderAll();toast("Salvato");
+}
+function remove(kind,id,extra){
+  if(!confirm("Vuoi davvero eliminare questo elemento?"))return;
+  if(kind==="member"){state.team=state.team.filter(x=>x.id!==id);if(state.activeMemberId===id)state.activeMemberId=state.team[0]?.id||null}
+  if(kind==="client")state.clients=state.clients.filter(x=>x.id!==id);
+  if(kind==="service")state.services=state.services.filter(x=>x.id!==id);
+  if(kind==="opportunity"){state.opportunities=state.opportunities.filter(x=>x.id!==id);closeModal()}
+  if(kind==="project")state.projects=state.projects.filter(x=>x.id!==id);
+  if(kind==="task"){const p=project(id);p.tasks=p.tasks.filter(x=>x.id!==extra)}
+  save();closeSheet();renderAll();toast("Elemento eliminato");
+}
+function convertOpportunity(id){
+  const o=state.opportunities.find(x=>x.id===id);if(!o)return;
+  closeModal();projectForm({title:(client(o.clientId)?.name||"Nuovo")+" — "+(service(o.serviceId)?.name||o.request||"Progetto"),clientId:o.clientId,status:"open",budget:o.budget,memberIds:o.ownerId?[o.ownerId]:[],tasks:[]});
+}
+function globalSearch(){
+  openModal("Cerca",`<div class="form"><label>Cerca in tutto ReFrame<input id="globalSearch" autofocus placeholder="Cliente, progetto, persona…"></label><div id="searchResults"></div></div>`);
+  setTimeout(()=>$("#globalSearch")?.focus(),50);
+}
+function searchResults(q){
+  q=q.toLowerCase();const results=[
+    ...state.projects.filter(x=>x.title.toLowerCase().includes(q)).map(x=>({type:"project",id:x.id,label:x.title})),
+    ...state.clients.filter(x=>x.name.toLowerCase().includes(q)).map(x=>({type:"client",id:x.id,label:x.name})),
+    ...state.team.filter(x=>x.name.toLowerCase().includes(q)).map(x=>({type:"member",id:x.id,label:x.name})),
+    ...state.opportunities.filter(x=>(client(x.clientId)?.name||"").toLowerCase().includes(q)).map(x=>({type:"opportunity",id:x.id,label:"Opportunità · "+client(x.clientId)?.name}))
+  ];$("#searchResults").innerHTML=q?results.map(r=>`<button class="button secondary" style="width:100%;text-align:left" data-search-type="${r.type}" data-search-id="${r.id}">${esc(r.label)}</button>`).join("")||empty("Nessun risultato","Prova con un altro termine.",null):"";
 }
 
-function openQuickSearch() {
-  openEntityPanel("Ricerca globale", "Cerca nel gestionale", `<section class="entity-section"><form class="entity-form" id="globalSearchForm"><label class="full-field">Cliente, progetto o persona<input id="globalSearchInput" placeholder="Es. Artluce, Luca, Barcolana" autofocus></label></form><div class="linked-list" id="globalSearchResults"></div></section>`);
-  const input = $("#globalSearchInput");
-  const render = () => {
-    const query = input.value.trim().toLowerCase();
-    const results = [];
-    Object.entries(projects).forEach(([key,item]) => { if (`${item.client} ${item.title}`.toLowerCase().includes(query)) results.push(linkedProjectButton(key)); });
-    Object.entries(clientData).forEach(([key,item]) => { if (`${item.name} ${item.sector}`.toLowerCase().includes(query)) results.push(`<button class="linked-item" data-open-client="${key}"><span><strong>${escapeText(item.name)}</strong><small>Cliente · ${escapeText(item.sector)}</small></span><em>→</em></button>`); });
-    Object.entries(memberData).forEach(([key,item]) => { if (`${item.name} ${item.skills}`.toLowerCase().includes(query)) results.push(`<button class="linked-item" data-open-member="${key}"><span><strong>${escapeText(item.name)}</strong><small>Team · ${escapeText(item.skills)}</small></span><em>→</em></button>`); });
-    $("#globalSearchResults").innerHTML = query ? results.slice(0,8).join("") || `<div class="activity-note">Nessun risultato.</div>` : `<div class="activity-note">Scrivi almeno una parola per iniziare.</div>`;
-    $$('[data-open-client]', $("#entityPanel")).forEach(button=>button.addEventListener("click",()=>openClient(button.dataset.openClient))); bindEntityLinks();
-  };
-  input.addEventListener("input", render); render(); input.focus();
-}
-
-function openNewClientForm() {
-  openEntityPanel("Nuovo cliente", "Crea anagrafica", `<section class="entity-section"><form class="entity-form" id="newClientForm"><label>Nome cliente<input name="name" required></label><label>Settore<input name="sector" required></label><label>Contatto<input name="contact"></label><label>Email<input name="email" type="email"></label><label>Referente<select name="owner"><option>Andrea Castellazzo</option><option>Simone Maffessoni</option><option>Martina Riva</option><option>Luca Moretti</option></select></label><label class="full-field">Accordi o note<textarea name="agreement"></textarea></label><button class="primary-button" type="submit">Crea cliente</button></form></section>`);
-  $("#newClientForm").addEventListener("submit", event => {
-    event.preventDefault(); const data=Object.fromEntries(new FormData(event.currentTarget)); const key=`created-${Date.now()}`;
-    clientData[key]={...data,value:"€0",jobs:"0",projects:[],opportunities:[]};
-    const row=document.createElement("button"); row.className="table-row"; row.dataset.client=key; row.innerHTML=`<span class="entity"><i class="client-logo blue">${escapeText(data.name.split(/\s+/).slice(0,2).map(word=>word[0]).join("").toUpperCase())}</i><span><strong>${escapeText(data.name)}</strong><small>${escapeText(data.sector)}</small></span></span><span>${escapeText(data.owner)}</span><span>0</span><span>€0</span><span>Nuovo cliente</span>`;
-    row.addEventListener("click",()=>openClient(key)); $(".client-table").append(row); closeEntityPanel(); toast(`${data.name} aggiunto ai clienti`);
-  });
-}
-
-function wireConnectedSurfaces() {
-  const opportunityKeys=["garda","officina","pasta","vela","lumea"];
-  $$('.opportunity-card:not(.is-created)').forEach((card,index)=>{ card.dataset.opportunity=opportunityKeys[index] || "project-artluce"; if(!card.dataset.bound){card.dataset.bound="1";card.addEventListener("click",()=>card.dataset.opportunity==="project-artluce"?openProjectDirect("artluce"):openOpportunity(card.dataset.opportunity));}});
-  $$('.opportunity-card.is-created').forEach(card=>{if(!card.dataset.bound){card.dataset.bound="1";card.addEventListener("click",()=>openOpportunity(card.dataset.opportunity));}});
-  const clientKeys=["artluce","pasta","lumea","vela"];
-  $$('.client-table .table-row').forEach((row,index)=>{row.dataset.client=row.dataset.client||clientKeys[index];if(!row.dataset.bound){row.dataset.bound="1";row.addEventListener("click",()=>openClient(row.dataset.client));}});
-  const memberKeys=["andrea","luca","martina","simone"];
-  $$('.member-card').forEach((card,index)=>{card.dataset.member=memberKeys[index];if(!card.dataset.bound){card.dataset.bound="1";card.addEventListener("click",()=>openMember(card.dataset.member));}});
-  const calendarActions=[()=>showView("team"),()=>openOpportunity("pasta"),()=>openProjectTaskDirect("artluce","art-03"),()=>openProjectTaskDirect("studio","stu-02"),()=>openProjectTaskDirect("barcolana","bar-02"),()=>openOpportunity("vela"),()=>openOpportunity("lumea"),()=>openProjectTaskDirect("artluce","art-05")];
-  $$('.calendar-event').forEach((event,index)=>{event.dataset.category=["team","commercial","work","delivery","work","commercial","commercial","delivery"][index];event.tabIndex=0;if(!event.dataset.bound){event.dataset.bound="1";event.addEventListener("click",calendarActions[index]);event.addEventListener("keydown",e=>{if(e.key==="Enter")calendarActions[index]();});}});
-}
-
-function closeModal() {
-  $("#opportunityModal").hidden = true;
-  document.body.style.overflow = "";
-}
-
-function updateClock() {
-  const now = new Date();
-  const hour = now.getHours();
-  $("#greeting").textContent = hour >= 4 && hour < 18 ? "Buongiorno" : "Buonasera";
-  $("#liveTime").textContent = now.toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" });
-  $("#todayDate").textContent = now.toLocaleDateString("it-IT", { weekday: "long", day: "numeric", month: "long" });
-}
-
-$$('[data-view]').forEach(button => button.addEventListener("click", () => showView(button.dataset.view)));
-$$('[data-view-jump]').forEach(button => button.addEventListener("click", () => showView(button.dataset.viewJump)));
-
-const rolePopover = $("#rolePopover");
-function toggleRoles(event) { event.stopPropagation(); rolePopover.hidden = !rolePopover.hidden; $("#notifications").hidden = true; }
-$("#roleSwitch").addEventListener("click", toggleRoles);
-$("#profileButton").addEventListener("click", toggleRoles);
-$$('[data-role]').forEach(button => button.addEventListener("click", () => applyRole(button.dataset.role)));
-
-$("#notificationButton").addEventListener("click", event => { event.stopPropagation(); const panel = $("#notifications"); panel.hidden = !panel.hidden; rolePopover.hidden = true; });
-$("#closeNotifications").addEventListener("click", () => $("#notifications").hidden = true);
-document.addEventListener("click", event => {
-  if (!event.target.closest(".popover") && !event.target.closest("#roleSwitch") && !event.target.closest("#profileButton") && !event.target.closest("#notificationButton")) {
-    rolePopover.hidden = true;
-    $("#notifications").hidden = true;
+document.addEventListener("click",e=>{
+  const view=e.target.closest("[data-view]");if(view){showView(view.dataset.view);return}
+  const action=e.target.closest("[data-action]")?.dataset.action;
+  if(action){
+    if(action==="new-member")memberForm();
+    else if(action==="new-client")clientForm();
+    else if(action==="new-service")serviceForm();
+    else if(action==="new-opportunity")opportunityForm();
+    else if(action==="new-project")projectForm();
+    else if(action==="close-sheet")closeSheet();
+    else if(action==="close-modal")closeModal();
+    else if(action.startsWith("edit-project:"))projectForm(project(action.split(":")[1]));
+    else if(action.startsWith("new-task:"))taskForm(action.split(":")[1]);
+    else if(action.startsWith("convert-opportunity:"))convertOpportunity(action.split(":")[1]);
+    else if(action.startsWith("delete-")){const [kind,id,extra]=action.slice(7).split(":");remove(kind,id,extra)}
+    return;
   }
+  const profile=e.target.closest("[data-profile]");if(profile){state.activeMemberId=profile.dataset.profile;save();$("#profileMenu").hidden=true;renderAll();toast("Vista personale aggiornata");return}
+  const openP=e.target.closest("[data-open-project]");if(openP){openProject(openP.dataset.openProject);return}
+  const openT=e.target.closest("[data-open-task]");if(openT){const [p,t]=openT.dataset.openTask.split(":");openProject(p,t);return}
+  const openO=e.target.closest("[data-open-opportunity]");if(openO){opportunityForm(state.opportunities.find(x=>x.id===openO.dataset.openOpportunity));return}
+  const openC=e.target.closest("[data-open-client]");if(openC){clientForm(client(openC.dataset.openClient));return}
+  const openM=e.target.closest("[data-open-member]");if(openM){memberForm(member(openM.dataset.openMember));return}
+  const openS=e.target.closest("[data-open-service]");if(openS){serviceForm(service(openS.dataset.openService));return}
+  const scope=e.target.closest("[data-project-scope]");if(scope){projectScope=scope.dataset.projectScope;renderProjects();return}
+  const status=e.target.closest("[data-project-status]");if(status){projectStatus=status.dataset.projectStatus;renderProjects();return}
+  const opp=e.target.closest("[data-opp-filter]");if(opp){opportunityFilter=opp.dataset.oppFilter;renderOpportunities();return}
+  const my=e.target.closest("[data-my-filter]");if(my){myFilter=my.dataset.myFilter;renderMyWork();return}
+  const result=e.target.closest("[data-search-type]");if(result){closeModal();({project:()=>openProject(result.dataset.searchId),client:()=>clientForm(client(result.dataset.searchId)),member:()=>memberForm(member(result.dataset.searchId)),opportunity:()=>opportunityForm(state.opportunities.find(x=>x.id===result.dataset.searchId))}[result.dataset.searchType])();return}
 });
-
-const modal = $("#opportunityModal");
-$$('[data-open-modal]').forEach(button => button.addEventListener("click", () => { modal.hidden = false; document.body.style.overflow = "hidden"; setTimeout(() => modal.querySelector("input").focus(), 50); }));
-$$('[data-close-modal]').forEach(button => button.addEventListener("click", closeModal));
-modal.addEventListener("click", event => { if (event.target === modal) closeModal(); });
-$("#advancedToggle").addEventListener("click", () => {
-  const fields = $("#advancedFields");
-  fields.hidden = !fields.hidden;
-  $("#advancedToggle").textContent = fields.hidden ? "＋ Aggiungi stima o servizi" : "− Nascondi dettagli aggiuntivi";
-});
-$("#opportunityForm").addEventListener("submit", event => {
-  event.preventDefault();
-  const form = new FormData(event.currentTarget);
-  const item = Object.fromEntries(form.entries());
-  opportunities.unshift({ ...item, createdAt: Date.now() });
-  persist();
-  renderOpportunities();
-  closeModal();
-  event.currentTarget.reset();
-  $("#advancedFields").hidden = true;
-  $("#advancedToggle").textContent = "＋ Aggiungi stima o servizi";
-  showView("opportunities");
-  toast(`${item.client} aggiunto alle opportunità`);
-});
-
-$$('[data-toast]').forEach(button => button.addEventListener("click", () => toast(button.dataset.toast)));
-$$('[data-task-filter]').forEach(button => button.addEventListener("click", () => { activeTaskFilter = button.dataset.taskFilter; renderTasks(); }));
-$$('[data-mywork-filter]').forEach(button => button.addEventListener("click", () => { activeMyWorkFilter=button.dataset.myworkFilter; $$('[data-mywork-filter]').forEach(item=>item.classList.toggle("is-active",item===button)); renderPersonalFeed(); }));
-$("#myWorkSearch").addEventListener("input",renderPersonalFeed);
-$$('[data-pipeline-filter]').forEach(button => button.addEventListener("click", () => {
-  const filter = button.dataset.pipelineFilter;
-  $$('[data-pipeline-filter]').forEach(item => item.classList.toggle("is-active", item === button));
-  $$('.opportunity-card').forEach(card => card.style.display = filter === "all" || (filter === "mine" && card.dataset.owner === roles[currentRole].name) || (filter === "late" && card.dataset.late === "true") ? "block" : "none");
-}));
-$("#opportunitySearch").addEventListener("input", event => {
-  const query = event.target.value.toLowerCase();
-  $$('.opportunity-card').forEach(card => card.style.display = card.textContent.toLowerCase().includes(query) ? "block" : "none");
-});
-$$('.project-row').forEach(row => row.addEventListener("click", () => openProject(row.dataset.project)));
-$("#closeDrawer").addEventListener("click", () => { $("#projectDrawer").classList.remove("is-open"); $("#projectDrawer").setAttribute("aria-hidden", "true"); });
-$("#openProjectWorkspace").addEventListener("click", openProjectWorkspace);
-$("#closeProjectWorkspace").addEventListener("click", closeProjectWorkspace);
-$("#addTaskButton").addEventListener("click", showNewTaskForm);
-$("#attachmentInput").addEventListener("change", event => {
-  pendingFiles = [...event.target.files].map(file => file.name);
-  const existing = $(".pending-files");
-  if (existing) existing.remove();
-  if (pendingFiles.length) event.target.closest("div").insertAdjacentHTML("beforebegin", `<p class="pending-files">${pendingFiles.map(escapeText).join(" · ")}</p>`);
-});
-$("#commentForm").addEventListener("submit", event => {
-  event.preventDefault();
-  const task = getActiveProjectTask();
-  if (!task) return toast("Seleziona prima una lavorazione");
-  const field = event.currentTarget.elements.comment;
-  const text = field.value.trim();
-  if (!text) return;
-  const role = roles[currentRole];
-  task.comments.push({ author:role.name, initials:role.initials, tone:role.tone, time:"Adesso", text, files:[...pendingFiles] });
-  field.value = ""; pendingFiles = []; $("#attachmentInput").value = ""; $(".pending-files")?.remove();
-  persist(); renderComments(); toast("Commento pubblicato");
-});
-document.addEventListener("keydown", event => {
-  if (event.key === "Escape") { closeModal(); closeProjectWorkspace(); $("#projectDrawer").classList.remove("is-open"); rolePopover.hidden = true; $("#notifications").hidden = true; }
-});
-$("#searchButton").addEventListener("click", () => toast("Ricerca globale prevista nella prossima iterazione"));
-
-$("#searchButton").replaceWith($("#searchButton").cloneNode(true));
-$("#searchButton").addEventListener("click", openQuickSearch);
-$("#closeEntityPanel").addEventListener("click", closeEntityPanel);
-$("#newClientButton").addEventListener("click", openNewClientForm);
-$("#availabilityButton").addEventListener("click", () => openMember(currentRole));
-$("#findPersonButton").addEventListener("click", () => { showView("team"); openMember("luca"); });
-$('[data-decision="pasta"]').addEventListener("click", () => openOpportunity("pasta"));
-$('[data-decision="barcolana"]').addEventListener("click", () => openProjectTaskDirect("barcolana","bar-02"));
-$('[data-decision="luca"]').addEventListener("click", () => openMember("luca"));
-$$('[data-workspace-tab]').forEach(button => button.addEventListener("click", () => showWorkspaceTab(button.dataset.workspaceTab)));
-
-const projectFilterModes=["all","review","blocked","archive"];
-$$('.project-filters button').forEach((button,index)=>button.addEventListener("click",()=>{
-  $$('.project-filters button').forEach(item=>item.classList.toggle("is-active",item===button));
-  const mode=projectFilterModes[index];
-  $$('.project-row').forEach(row=>{ const key=row.dataset.project; const visible=mode==="all"||(mode==="review"&&projects[key].stateClass==="review")||(mode==="blocked"&&projects[key].stateClass==="blocked"); row.classList.toggle("is-filtered",!visible); });
-  if(mode==="archive") toast("Nessun progetto concluso in questa demo");
-}));
-$("#projectArchive").addEventListener("click",()=>$$('.project-filters button')[3].click());
-
-const calendarModes=["all","delivery","team","commercial"];
-$$('.calendar-mode button').forEach((button,index)=>button.addEventListener("click",()=>{
-  $$('.calendar-mode button').forEach(item=>item.classList.toggle("is-active",item===button));
-  const mode=calendarModes[index]; $$('.calendar-event').forEach(event=>event.style.display=mode==="all"||event.dataset.category===mode?"block":"none");
-}));
-let calendarOffset=0;
-const calendarControlButtons=$$('.calendar-controls button');
-function updateCalendarWeek(){ const days=$$('.day-column header strong'); days.forEach((day,index)=>day.textContent=String(21+index+calendarOffset*7)); $$('.calendar-event').forEach(event=>event.style.opacity=calendarOffset===0?"1":".16"); calendarControlButtons[1].textContent=calendarOffset===0?"Questa settimana":calendarOffset<0?"Settimana precedente":"Settimana successiva"; }
-calendarControlButtons[0].addEventListener("click",()=>{calendarOffset--;updateCalendarWeek();}); calendarControlButtons[1].addEventListener("click",()=>{calendarOffset=0;updateCalendarWeek();}); calendarControlButtons[2].addEventListener("click",()=>{calendarOffset++;updateCalendarWeek();});
-
-const notificationActions=[()=>openProjectTaskDirect("artluce","art-04"),()=>openProjectTaskDirect("barcolana","bar-02"),()=>openOpportunity("vela")];
-$$('#notifications>button').forEach((button,index)=>button.addEventListener("click",()=>{ $("#notifications").hidden=true; notificationActions[index](); }));
-const financeActions=[()=>openProjectDirect("artluce"),()=>openProjectDirect("studio"),()=>openProjectDirect("barcolana")];
-$$('.finance-list button').forEach((button,index)=>button.addEventListener("click",financeActions[index]));
-$("#exportFinance").addEventListener("click",()=>{ const csv="Voce,Importo\nConcordato,31900\nFatturato,25100\nIncassato,18300\nDistribuito,11840"; const link=document.createElement("a"); link.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"})); link.download="reframe-riepilogo-economico.csv"; link.click(); URL.revokeObjectURL(link.href); toast("Riepilogo CSV esportato"); });
-$(".period-select").addEventListener("change",event=>{ const values={"Ultimi 6 mesi":["€92.400","38%","86%","41%"],"Questo mese":["€18.300","42%","91%","46%"],"Quest'anno":["€146.800","39%","84%","43%"]}; $$("#view-insights .metric-row strong").forEach((item,index)=>item.textContent=values[event.target.value][index]); toast(`Insight aggiornati: ${event.target.value.toLowerCase()}`); });
-
-const clientSearch=$("#view-clients .search-field input");
-clientSearch.addEventListener("input",()=>{const q=clientSearch.value.toLowerCase();$$('.client-table .table-row').forEach(row=>row.style.display=row.textContent.toLowerCase().includes(q)?"grid":"none");});
-$$('#view-clients .filter-button').forEach((button,index)=>button.addEventListener("click",()=>{ $$('#view-clients .filter-button').forEach(item=>item.classList.toggle("is-active",item===button)); $$('.client-table .table-row').forEach((row,rowIndex)=>row.style.display=index===0||(index===1&&rowIndex!==1)||(index===2&&(rowIndex===0||rowIndex===2||rowIndex===3))?"grid":"none"); }));
-
-wireConnectedSurfaces();
-
-updateClock();
-setInterval(updateClock, 60000);
-applyRole(currentRole, false);
-const initialView = location.hash.slice(1);
-if (labels[initialView]) showView(initialView);
+document.addEventListener("submit",e=>{if(e.target.matches("[data-form]")){e.preventDefault();submitForm(e.target)}});
+document.addEventListener("input",e=>{if(e.target.id==="globalSearch")searchResults(e.target.value)});
+$("#quickOpportunity").onclick=()=>opportunityForm();
+$("#profileButton").onclick=()=>$("#profileMenu").hidden=!$("#profileMenu").hidden;
+$("#topProfile").onclick=()=>$("#profileMenu").hidden=!$("#profileMenu").hidden;
+$("#searchButton").onclick=globalSearch;
+$("#closeSheet").onclick=closeSheet;$("#backdrop").onclick=closeSheet;$("#closeModal").onclick=closeModal;
+document.addEventListener("keydown",e=>{if(e.key==="Escape"){closeSheet();closeModal()}});
+showView(currentView);
