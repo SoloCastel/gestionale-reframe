@@ -11,6 +11,21 @@
   <link rel="stylesheet" href="fix.css">
 </head>
 <body>
+  <div class="auth-gate" id="authGate">
+    <div class="auth-card">
+      <div class="brand auth-brand"><span>R</span><strong>ReFrame</strong></div>
+      <p class="eyebrow">Gestionale condiviso</p>
+      <h1>Accedi al workspace</h1>
+      <p>I dati sono sincronizzati online e disponibili su tutti i tuoi dispositivi.</p>
+      <form class="form" id="loginForm">
+        <label>Email<input type="email" name="email" autocomplete="email" required></label>
+        <label>Password<input type="password" name="password" autocomplete="current-password" required></label>
+        <button class="button primary">Accedi</button>
+      </form>
+      <button class="button secondary auth-link" id="magicLinkButton">Invia un link di accesso via email</button>
+      <small id="authMessage"></small>
+    </div>
+  </div>
   <div class="app">
     <aside class="sidebar">
       <div class="brand"><span>R</span><strong>ReFrame</strong></div>
@@ -54,6 +69,8 @@
   <aside class="sheet" id="sheet" aria-hidden="true"><div class="sheet-head"><div><small id="sheetEyebrow"></small><h2 id="sheetTitle"></h2></div><button class="icon" id="closeSheet">×</button></div><div id="sheetBody"></div></aside>
   <div class="modal-wrap" id="modalWrap" hidden><div class="modal"><div class="sheet-head"><div><small>Inserimento rapido</small><h2 id="modalTitle">Nuova opportunità</h2></div><button class="icon" id="closeModal">×</button></div><div id="modalBody"></div></div></div>
   <div class="toast" id="toast"></div>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/dist/umd/supabase.min.js"></script>
   <script src="app.js"></script>
+  <script src="sync.js"></script>
 </body>
 </html>
