@@ -7,7 +7,7 @@ const roles = {
   luca: { name: "Luca", full: "Luca Moretti", initials: "LM", role: "Operativo · videomaker", summary: "Il tuo carico è oltre la capacità: prima risolviamo il conflitto, poi il resto.", tone: "peach", finance: false, insights: false, focus: "Segnala quale consegna spostare", focusText: "Questa settimana sei al 128% della capacità. Due consegne occupano la stessa giornata." }
 };
 
-const labels = { today: "Oggi", opportunities: "Opportunità", projects: "Progetti", calendar: "Calendario", clients: "Clienti", team: "Team", finance: "Amministrazione", insights: "Insight" };
+const labels = { today: "Oggi", mywork: "Il mio lavoro", opportunities: "Opportunità", projects: "Progetti", calendar: "Calendario", clients: "Clienti", team: "Team", finance: "Amministrazione", insights: "Insight" };
 
 const taskSets = {
   andrea: [
@@ -107,6 +107,13 @@ const taskDestinations = {
   "Selezione fotografie evento Artluce":["artluce","art-03"], "Inviare seconda versione homepage":["studio","stu-02"], "Preparare moodboard lancio prodotto":["lumea","lum-03"], "Montare teaser Artluce":["artluce","art-04"], "Esportare Barcolana v03":["barcolana","bar-02"], "Backup riprese Artluce":["artluce","art-02"], "Preparare animatic Lumea":["lumea","lum-04"], "Revisionare montaggio Barcolana":["barcolana","bar-02"], "Assegnare montaggio Artluce":["artluce","art-04"], "Aggiornare componenti Studio Nord":["studio","stu-02"]
 };
 
+const agendaData = {
+  andrea:[{time:"09:00",label:"Team",title:"Stand-up ReFrame",meta:"Team · 30 min",target:{type:"member",key:"simone"},completed:true},{time:"14:00",label:"Opportunità",title:"Call Pasta Lab",meta:"Andrea + Simone · 45 min",target:{type:"opportunity",key:"pasta"}},{time:"17:00",label:"Consegna",title:"Homepage Studio Nord",meta:"Versione 02",target:{type:"task",project:"studio",task:"stu-02"}}],
+  simone:[{time:"11:30",label:"Decisione",title:"Stima Pasta Lab",meta:"Approvazione commerciale",target:{type:"opportunity",key:"pasta"}},{time:"14:00",label:"Blocco",title:"Assegnazione montaggio Artluce",meta:"Produzione",target:{type:"task",project:"artluce",task:"art-04"}},{time:"16:30",label:"Revisione",title:"Montaggio Barcolana",meta:"Round finale",target:{type:"task",project:"barcolana",task:"bar-03"}}],
+  martina:[{time:"13:00",label:"Revisione",title:"Feedback Pasta Lab",meta:"Branding · round 02",target:{type:"opportunity",key:"pasta"}},{time:"16:00",label:"Consegna",title:"Presentazione La Vela",meta:"Cliente",target:{type:"opportunity",key:"vela"}},{time:"17:30",label:"Lavorazione",title:"Componenti Studio Nord",meta:"Sito web",target:{type:"task",project:"studio",task:"stu-03"}}],
+  luca:[{time:"12:00",label:"Montaggio",title:"Teaser Artluce",meta:"Prima versione",target:{type:"task",project:"artluce",task:"art-04"}},{time:"15:00",label:"Consegna",title:"Barcolana v03",meta:"Film di bordo",target:{type:"task",project:"barcolana",task:"bar-04"}},{time:"17:30",label:"Pianificazione",title:"Conflitto di carico",meta:"Team",target:{type:"member",key:"luca"}}]
+};
+
 const $ = (selector, scope = document) => scope.querySelector(selector);
 const $$ = (selector, scope = document) => [...scope.querySelectorAll(selector)];
 
@@ -121,6 +128,8 @@ let completedTasks = saved.completedTasks || {};
 let projectTasks = saved.projectTasks || structuredClone(defaultProjectTasks);
 let entityEdits = saved.entityEdits || {};
 let activeTaskFilter = "today";
+let activeMyWorkFilter = "all";
+let personalFeedItems = [];
 let activeProjectKey = "artluce";
 let activeProjectTaskId = null;
 let pendingFiles = [];
@@ -146,6 +155,7 @@ function showView(view) {
   $$('[data-view-panel]').forEach(panel => panel.classList.toggle("is-active", panel.dataset.viewPanel === view));
   $$('[data-view]').forEach(button => button.classList.toggle("is-active", button.dataset.view === view));
   $("#currentViewLabel").textContent = labels[view];
+  if (view === "mywork") renderPersonalFeed();
   history.replaceState(null, "", "#" + view);
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
@@ -169,6 +179,7 @@ function renderTasks() {
   $$('.task-row input').forEach(input => input.addEventListener("change", () => {
     completedTasks[input.dataset.taskId] = input.checked;
     persist();
+    renderPersonalFeed();
     toast(input.checked ? "Attività completata" : "Attività riaperta");
   }));
   $$('.task-row .task-main').forEach(element => element.addEventListener("click", event => {
@@ -178,6 +189,73 @@ function renderTasks() {
     if (title.includes("Garda Sailing")) { event.preventDefault(); event.stopPropagation(); openOpportunity("garda"); }
     else if (title.includes("Martina")) { event.preventDefault(); event.stopPropagation(); openOpportunity("pasta"); }
   }));
+}
+
+function personalActionTarget(title) {
+  if (taskDestinations[title]) return {type:"task",project:taskDestinations[title][0],task:taskDestinations[title][1]};
+  if (title.includes("Garda Sailing")) return {type:"opportunity",key:"garda"};
+  if (title.includes("Pasta Lab") || title.includes("Martina")) return {type:"opportunity",key:"pasta"};
+  if (title.includes("Officina Maffei")) return {type:"opportunity",key:"officina"};
+  if (title.includes("La Vela")) return {type:"opportunity",key:"vela"};
+  if (title.includes("Luca") || title.includes("carico")) return {type:"member",key:"luca"};
+  if (title.includes("Artluce")) return {type:"project",key:"artluce"};
+  return {type:"generic"};
+}
+
+function buildPersonalFeed() {
+  const role = roles[currentRole];
+  const today = new Date();
+  const todayIso = today.toISOString().slice(0,10);
+  const projectItems = Object.entries(projectTasks).flatMap(([projectKey,tasks]) => tasks.filter(task => task.assignee === role.name && task.status !== "Completata").map(task => ({
+    id:`project-${projectKey}-${task.id}`,title:task.title,context:`${projects[projectKey].client} · ${task.phase}`,kind:task.status === "In revisione" ? "Revisione" : "Progetto",kindKey:task.status === "In revisione" ? "review" : "project",status:task.status,due:task.due||"Senza scadenza",group:task.due && task.due < todayIso ? "overdue" : task.due === todayIso ? "today" : "upcoming",target:{type:"task",project:projectKey,task:task.id}
+  })));
+  const projectTargets = new Set(projectItems.map(item=>`${item.target.project}:${item.target.task}`));
+  const actionItems = taskSets[currentRole].map((task,index) => {
+    const [title,context,time,state,priority]=task; const target=personalActionTarget(title);
+    if(target.type==="task" && projectTargets.has(`${target.project}:${target.task}`)) return null;
+    return {id:`action-${currentRole}-${index}`,title,context,kind:context.includes("Opportunità")||context.includes("commercial")?"Commerciale":"Azione",kindKey:context.includes("Opportunità")||context.includes("commercial")?"commercial":"action",status:priority==="high"?"Priorità alta":"Da fare",due:time,group:state==="late"?"overdue":state==="today"?"today":"upcoming",target};
+  }).filter(Boolean);
+  const commercialItems = Object.entries(opportunityData).filter(([,item]) => item.owner === role.name && !["Confermata","Persa"].includes((entityEdits[`opp-${Object.keys(opportunityData).find(key=>opportunityData[key]===item)}`]||{}).stage||item.stage)).map(([key,item]) => {
+    const edited={...item,...(entityEdits[`opp-${key}`]||{})};
+    return {id:`commercial-${key}`,title:edited.next,context:`${edited.client} · ${edited.service}`,kind:"Commerciale",kindKey:"commercial",status:edited.stage,due:edited.date,group:String(edited.date).includes("Oggi")?"today":"upcoming",target:{type:"opportunity",key}};
+  });
+  const unique = new Map();
+  [...projectItems,...actionItems,...commercialItems].forEach(item=>unique.set(item.id,item));
+  return [...unique.values()];
+}
+
+function openPersonalFeedItem(item) {
+  if (item.target.type === "task") return openProjectTaskDirect(item.target.project,item.target.task);
+  if (item.target.type === "opportunity") return openOpportunity(item.target.key);
+  if (item.target.type === "member") return openMember(item.target.key);
+  if (item.target.type === "project") return openProjectDirect(item.target.key);
+  openEntityPanel("Azione personale", item.title, `<div class="entity-summary"><div><span>Stato</span><strong>${escapeText(item.status)}</strong></div><div><span>Scadenza</span><strong>${escapeText(item.due)}</strong></div><div><span>Responsabile</span><strong>${escapeText(roles[currentRole].name)}</strong></div></div><section class="entity-section"><h3>Contesto</h3><div class="activity-note">${escapeText(item.context)}</div><button class="primary-button full" id="completePersonalAction">Segna come completata</button></section>`);
+  $("#completePersonalAction").addEventListener("click",()=>{completedTasks[item.id]=true;persist();renderPersonalFeed();closeEntityPanel();toast("Azione completata");});
+}
+
+function renderPersonalFeed() {
+  if (!$("#personalFeed")) return;
+  personalFeedItems = buildPersonalFeed().filter(item=>!completedTasks[item.id]);
+  const query = ($("#myWorkSearch")?.value||"").trim().toLowerCase();
+  const filtered = personalFeedItems.filter(item => (activeMyWorkFilter==="all"||item.group===activeMyWorkFilter||item.kindKey===activeMyWorkFilter) && (!query||`${item.title} ${item.context} ${item.status}`.toLowerCase().includes(query)));
+  const groups=[["overdue","In ritardo"],["today","Oggi"],["upcoming","Prossimi giorni"]];
+  $("#personalFeed").innerHTML=groups.map(([key,label])=>{const items=filtered.filter(item=>item.group===key);if(!items.length)return "";return `<section class="feed-group"><header><strong>${label}</strong><span>${items.length} attività</span></header>${items.map(item=>`<button class="feed-row" data-feed-id="${escapeText(item.id)}"><span class="feed-check"></span><span class="feed-row-main"><strong>${escapeText(item.title)}</strong><small>${escapeText(item.status)}</small></span><span class="feed-context">${escapeText(item.context)}</span><span class="feed-kind ${item.kindKey}">${escapeText(item.kind)}</span><span class="feed-due ${key==="overdue"?"overdue":""}">${escapeText(item.due)}</span><span class="feed-arrow">→</span></button>`).join("")}</section>`}).join("")||`<div class="feed-empty">Nessuna attività corrisponde ai filtri selezionati.</div>`;
+  const late=personalFeedItems.filter(item=>item.group==="overdue").length,today=personalFeedItems.filter(item=>item.group==="today").length,reviews=personalFeedItems.filter(item=>item.kindKey==="review").length;
+  $("#myWorkOpenCount").textContent=personalFeedItems.length;$("#myWorkLateCount").textContent=late;$("#myWorkTodayCount").textContent=today;$("#myWorkReviewCount").textContent=reviews;$("#myWorkNavCount").textContent=personalFeedItems.length;
+  $$('[data-feed-id]').forEach(button=>button.addEventListener("click",()=>openPersonalFeedItem(personalFeedItems.find(item=>item.id===button.dataset.feedId))));
+}
+
+function openTarget(target) {
+  if(target.type==="task") return openProjectTaskDirect(target.project,target.task);
+  if(target.type==="opportunity") return openOpportunity(target.key);
+  if(target.type==="member") return openMember(target.key);
+  if(target.type==="project") return openProjectDirect(target.key);
+}
+
+function renderAgenda() {
+  const items=agendaData[currentRole];
+  $(".agenda").innerHTML=items.map((item,index)=>`<div class="agenda-time ${index===1?"current":""}"><time>${escapeText(item.time)}</time><span></span></div><button class="agenda-event ${item.completed?"completed":index===1?"purple":""}" data-agenda-index="${index}"><small>${escapeText(item.completed?"Completato":item.label)}</small><strong>${escapeText(item.title)}</strong><span>${escapeText(item.meta)}</span></button>`).join("");
+  $$('[data-agenda-index]').forEach(button=>button.addEventListener("click",()=>openTarget(items[Number(button.dataset.agendaIndex)].target)));
 }
 
 function applyRole(key, notify = true) {
@@ -200,6 +278,8 @@ function applyRole(key, notify = true) {
   if ((!role.finance && location.hash === "#finance") || (!role.insights && location.hash === "#insights")) showView("today");
   activeTaskFilter = "today";
   renderTasks();
+  renderAgenda();
+  renderPersonalFeed();
   renderOpportunities();
   persist();
   if (notify) toast(`Vista aggiornata per ${role.full}`);
@@ -261,7 +341,7 @@ function openOpportunity(key) {
   if (!original) return;
   const item = {...original, ...(entityEdits[`opp-${key}`] || {})};
   openEntityPanel("Opportunità commerciale", item.client, `<div class="entity-summary"><div><span>Fase</span><strong>${escapeText(item.stage)}</strong></div><div><span>Stima</span><strong>${escapeText(item.estimate)}</strong></div><div><span>Referente</span><strong>${escapeText(item.owner)}</strong></div></div><section class="entity-section"><h3>Dati e prossima azione</h3><form class="entity-form" id="opportunityDetailForm"><label>Fase<select name="stage">${["Da qualificare","In proposta","In attesa cliente","Confermata","Persa"].map(value=>`<option${value===item.stage?" selected":""}>${value}</option>`).join("")}</select></label><label>Referente<select name="owner">${["Andrea","Simone","Martina","Luca","Da assegnare"].map(value=>`<option${value===item.owner?" selected":""}>${value}</option>`).join("")}</select></label><label>Stima<input name="estimate" value="${escapeText(item.estimate)}"></label><label>Data azione<input name="date" value="${escapeText(item.date)}"></label><label class="full-field">Prossima azione<input name="next" value="${escapeText(item.next)}"></label><label class="full-field">Note<textarea name="notes">${escapeText(item.notes)}</textarea></label><button class="primary-button" type="submit">Salva opportunità</button></form></section><section class="entity-section"><h3>Cliente</h3><div class="linked-list"><button class="linked-item" data-open-client="${item.clientKey}"><span><strong>${escapeText(item.client)}</strong><small>${escapeText(item.contact)} · apri storico cliente</small></span><em>→</em></button></div></section>${key==="lumea"?`<section class="entity-section"><h3>Progetto collegato</h3><div class="linked-list">${linkedProjectButton("lumea")}</div></section>`:""}`);
-  $("#opportunityDetailForm").addEventListener("submit", event => { event.preventDefault(); entityEdits[`opp-${key}`] = Object.fromEntries(new FormData(event.currentTarget)); persist(); toast("Opportunità aggiornata"); openOpportunity(key); });
+  $("#opportunityDetailForm").addEventListener("submit", event => { event.preventDefault(); entityEdits[`opp-${key}`] = Object.fromEntries(new FormData(event.currentTarget)); persist(); renderPersonalFeed(); toast("Opportunità aggiornata"); openOpportunity(key); });
   $('[data-open-client]', $("#entityPanel")).addEventListener("click", event => openClient(event.currentTarget.dataset.openClient));
   bindEntityLinks();
 }
@@ -368,7 +448,7 @@ function renderTaskEditor() {
   $("#taskEditor").innerHTML = `<div class="task-headline"><button class="complete-task ${task.status === "Completata" ? "is-done" : ""}" id="completeProjectTask" aria-label="Completa task">${task.status === "Completata" ? "✓" : ""}</button><div><input id="projectTaskTitle" value="${escapeText(task.title)}" aria-label="Titolo task"><div class="task-code">${escapeText(task.id.toUpperCase())} · ${escapeText(task.phase)}</div></div></div><div class="task-fields"><label>Stato<select id="projectTaskStatus">${statusOptions.map(item => `<option${item === task.status ? " selected" : ""}>${item}</option>`).join("")}</select></label><label>Responsabile<select id="projectTaskAssignee">${assignees.map(item => `<option${item === task.assignee ? " selected" : ""}>${item}</option>`).join("")}</select></label><label>Scadenza<input id="projectTaskDue" type="date" value="${escapeText(task.due)}"></label></div><div class="task-description"><label>Descrizione<textarea id="projectTaskDescription">${escapeText(task.description)}</textarea></label></div><section class="task-editor-section"><div class="checklist-head"><span>Checklist</span><button id="addChecklistItem">＋ Aggiungi step</button></div><div class="checklist">${task.checklist.map((item,index) => `<label class="check-item ${item[1] ? "done" : ""}"><input type="checkbox" data-check-index="${index}"${item[1] ? " checked" : ""}><span>${escapeText(item[0])}</span></label>`).join("")}</div></section><div class="task-save-line"><small>Le modifiche vengono salvate in questa demo.</small><span><button class="secondary-button" id="openConversation">Commenti (${task.comments.length})</button> <button class="primary-button" id="saveProjectTask">Salva modifiche</button></span></div>`;
   $("#saveProjectTask").addEventListener("click", saveActiveTask);
   $("#openConversation").addEventListener("click", () => $(".task-conversation").classList.toggle("has-content"));
-  $("#completeProjectTask").addEventListener("click", () => { task.status = task.status === "Completata" ? "In lavorazione" : "Completata"; persist(); renderProjectWorkspace(); renderTaskEditor(); toast(task.status === "Completata" ? "Task completata" : "Task riaperta"); });
+  $("#completeProjectTask").addEventListener("click", () => { task.status = task.status === "Completata" ? "In lavorazione" : "Completata"; persist(); renderProjectWorkspace(); renderTaskEditor(); renderPersonalFeed(); toast(task.status === "Completata" ? "Task completata" : "Task riaperta"); });
   $$('[data-check-index]').forEach(input => input.addEventListener("change", () => { task.checklist[Number(input.dataset.checkIndex)][1] = input.checked; persist(); renderTaskEditor(); }));
   $("#addChecklistItem").addEventListener("click", () => { const title = prompt("Nome del nuovo step"); if (title?.trim()) { task.checklist.push([title.trim(), false]); persist(); renderTaskEditor(); } });
 }
@@ -383,6 +463,7 @@ function saveActiveTask() {
   persist();
   renderProjectWorkspace();
   renderTaskEditor();
+  renderPersonalFeed();
   toast("Lavorazione aggiornata");
 }
 
@@ -417,7 +498,7 @@ function showNewTaskForm() {
     const title = $("#newTaskTitle").value.trim();
     if (!title) return toast("Inserisci un titolo");
     const task = { id:`${activeProjectKey.slice(0,3)}-${Date.now().toString().slice(-4)}`, phase:$("#newTaskPhase").value, title, status:"Non iniziata", assignee:$("#newTaskAssignee").value, due:"", description:"", checklist:[], comments:[] };
-    projectTasks[activeProjectKey].push(task); activeProjectTaskId = task.id; persist(); renderProjectWorkspace(); renderTaskEditor(); toast("Nuova task creata");
+    projectTasks[activeProjectKey].push(task); activeProjectTaskId = task.id; persist(); renderProjectWorkspace(); renderTaskEditor(); renderPersonalFeed(); toast("Nuova task creata");
   });
 }
 
@@ -536,6 +617,8 @@ $("#opportunityForm").addEventListener("submit", event => {
 
 $$('[data-toast]').forEach(button => button.addEventListener("click", () => toast(button.dataset.toast)));
 $$('[data-task-filter]').forEach(button => button.addEventListener("click", () => { activeTaskFilter = button.dataset.taskFilter; renderTasks(); }));
+$$('[data-mywork-filter]').forEach(button => button.addEventListener("click", () => { activeMyWorkFilter=button.dataset.myworkFilter; $$('[data-mywork-filter]').forEach(item=>item.classList.toggle("is-active",item===button)); renderPersonalFeed(); }));
+$("#myWorkSearch").addEventListener("input",renderPersonalFeed);
 $$('[data-pipeline-filter]').forEach(button => button.addEventListener("click", () => {
   const filter = button.dataset.pipelineFilter;
   $$('[data-pipeline-filter]').forEach(item => item.classList.toggle("is-active", item === button));

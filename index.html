@@ -17,6 +17,7 @@
         <div class="brand"><span class="brand-mark">R</span><span class="brand-name">ReFrame</span></div>
         <nav class="main-nav">
           <button class="nav-item is-active" data-view="today"><span class="nav-icon">⌂</span><span>Oggi</span><b>5</b></button>
+          <button class="nav-item" data-view="mywork"><span class="nav-icon">✓</span><span>Il mio lavoro</span><b id="myWorkNavCount">0</b></button>
           <button class="nav-item" data-view="opportunities"><span class="nav-icon">◇</span><span>Opportunità</span><b>3</b></button>
           <button class="nav-item" data-view="projects"><span class="nav-icon">▣</span><span>Progetti</span></button>
           <button class="nav-item" data-view="calendar"><span class="nav-icon">□</span><span>Calendario</span></button>
@@ -71,7 +72,7 @@
 
             <div class="dashboard-grid">
               <article class="panel tasks-panel">
-                <div class="panel-heading"><div><h3>Il mio lavoro</h3><p>Solo ciò che richiede una tua azione</p></div><button class="text-button" data-view-jump="calendar">Vedi calendario</button></div>
+                <div class="panel-heading"><div><h3>Il mio lavoro</h3><p>Solo ciò che richiede una tua azione</p></div><button class="text-button" data-view-jump="mywork">Apri il feed</button></div>
                 <div class="task-tabs"><button class="is-active" data-task-filter="today">Oggi <span>4</span></button><button data-task-filter="late">In ritardo <span>1</span></button><button data-task-filter="week">Settimana <span>8</span></button></div>
                 <div class="task-list" id="taskList">
                   <label class="task-row" data-task-state="today"><input type="checkbox" /><span class="custom-check"></span><span class="task-main"><strong>Selezione fotografie evento Artluce</strong><small>Artluce · Consegna 01</small></span><time>12:30</time><i class="priority high"></i></label>
@@ -104,6 +105,14 @@
                 <div class="capacity-list"><div><span><i class="mini-avatar lilac">AC</i>Andrea</span><div><b style="--w:82%"></b></div><em>82%</em></div><div><span><i class="mini-avatar peach">LM</i>Luca</span><div><b class="over" style="--w:100%"></b></div><em class="danger">128%</em></div><div><span><i class="mini-avatar mint">MR</i>Martina</span><div><b style="--w:54%"></b></div><em>54%</em></div></div>
               </article>
             </div>
+          </section>
+
+          <section class="view" id="view-mywork" data-view-panel="mywork">
+            <div class="page-heading compact"><div><p class="eyebrow">Spazio personale</p><h1>Il mio lavoro</h1><p class="subtitle">Un unico feed con tutto ciò in cui sei coinvolto, ordinato per urgenza e senza il rumore del resto del team.</p></div><button class="secondary-button" data-view-jump="calendar">Vista calendario</button></div>
+            <div class="personal-flow"><div><b>1</b><span><strong>Scegli la priorità</strong><small>Parti da ritardi e scadenze di oggi</small></span></div><i>→</i><div><b>2</b><span><strong>Apri il contesto</strong><small>Vai direttamente alla task o opportunità</small></span></div><i>→</i><div><b>3</b><span><strong>Aggiorna e chiudi</strong><small>Stato, checklist, commenti e consegna</small></span></div></div>
+            <div class="mywork-summary"><article><span>Aperte</span><strong id="myWorkOpenCount">0</strong></article><article><span>In ritardo</span><strong id="myWorkLateCount">0</strong></article><article><span>Oggi</span><strong id="myWorkTodayCount">0</strong></article><article><span>In revisione</span><strong id="myWorkReviewCount">0</strong></article></div>
+            <div class="mywork-toolbar"><div class="search-field">⌕ <input type="search" id="myWorkSearch" placeholder="Cerca nelle mie attività" /></div><div class="filter-group"><button class="filter-button is-active" data-mywork-filter="all">Tutto</button><button class="filter-button" data-mywork-filter="overdue">In ritardo</button><button class="filter-button" data-mywork-filter="today">Oggi</button><button class="filter-button" data-mywork-filter="project">Progetti</button><button class="filter-button" data-mywork-filter="commercial">Commerciale</button></div></div>
+            <div class="personal-feed" id="personalFeed"></div>
           </section>
 
           <section class="view" id="view-opportunities" data-view-panel="opportunities">
